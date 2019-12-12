@@ -24,20 +24,20 @@ attribute_role gravity_container_roles;
 attribute gravity_domain;
 # attribute for processes runing inside the planet container
 attribute gravity_container_domain;
-# attribute for all gravity-specific processes
+# attribute for all gravity binaries
 attribute gravity_executable_domain;
 
-# FIXME: add gravity_var_run_t, gravity_runtime_exec_t for process domain.
-# Also consider using an attribute (gravity_domain, gravity_container_domain)
-# as opposed to attribute_roles to group permissions:
-
-# gravity cluster domain
+# gravity domains
 type gravity_t, gravity_domain;
+type gravity_installer_t, gravity_domain;
 type gravity_exec_t, gravity_executable_domain;
+type gravity_installer_exec_t, gravity_executable_domain;
 init_daemon_domain(gravity_t, gravity_exec_t)
-can_exec(gravity_t, gravity_exec_t)
-can_exec(gravity_t, gravity_container_file_t)
-role gravity_roles types gravity_t;
+init_daemon_domain(gravity_installer_t, gravity_installer_exec_t)
+can_exec(gravity_domain, gravity_exec_t)
+can_exec(gravity_domain, gravity_installer_exec_t)
+can_exec(gravity_domain, gravity_container_file_t)
+role gravity_roles types gravity_domain;
 
 # state directory
 type gravity_home_t;
@@ -51,10 +51,6 @@ logging_log_file(gravity_log_t)
 type gravity_tmp_t;
 files_tmp_file(gravity_tmp_t)
 
-# installer state directory (read/only)
-type gravity_install_home_t;
-files_type(gravity_install_home_t)
-
 # socket files
 type gravity_var_run_t;
 files_pid_file(gravity_var_run_t)
@@ -67,13 +63,11 @@ systemd_unit_file(gravity_unit_file_t)
 attribute gravity_port_type;
 type gravity_port_t, gravity_port_type;
 type gravity_install_port_t, gravity_port_type;
-type gravity_agent_port_t, gravity_port_type;
 type gravity_vxlan_port_t, gravity_port_type;
 type gravity_docker_port_t, gravity_port_type;
 type gravity_kubernetes_port_t, gravity_port_type;
 corenet_port(gravity_port_t)
 corenet_port(gravity_install_port_t)
-corenet_port(gravity_agent_port_t)
 corenet_port(gravity_vxlan_port_t)
 corenet_port(gravity_docker_port_t)
 corenet_port(gravity_kubernetes_port_t)
@@ -172,9 +166,6 @@ auth_read_passwd(gravity_domain)
 
 # allow to statfs the state directory
 fs_getattr_xattr_fs(gravity_domain)
-# search through user's home to be able to read installer content
-userdom_list_user_home_content(gravity_domain)
-userdom_search_user_home_dirs(gravity_domain)
 # read/write to $TMPDIR
 files_manage_generic_tmp_files(gravity_domain)
 domain_use_interactive_fds(gravity_domain)
@@ -196,19 +187,18 @@ fs_remount_all_fs(gravity_domain)
 
 files_tmp_filetrans(gravity_domain, gravity_tmp_t, { file dir lnk_file sock_file })
 
-# FIXME: installer home should be read/only
-#read_files_pattern(gravity_domain, gravity_install_home_t, gravity_install_home_t)
-#allow gravity_domain gravity_install_home_t:file { create append write unlink };
-admin_pattern(gravity_domain, gravity_install_home_t, gravity_install_home_t)
+# installer directory transitions
+userdom_user_home_content_filetrans(gravity_domain, gravity_home_t, dir, ".gravity")
+userdom_user_home_content_filetrans(gravity_domain, gravity_home_t, file)
+userdom_user_home_content_filetrans(gravity_domain, gravity_exec_t, file, "gravity")
+userdom_user_home_content_filetrans(gravity_domain, gravity_log_t, file, "gravity-system.log")
+userdom_user_home_content_filetrans(gravity_domain, gravity_log_t, file, "gravity-install.log")
+gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-installer.service")
+gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-agent.service")
+gravity_home_content_filetrans(gravity_domain, gravity_var_run_t, sock_file, "installer.sock")
 
-# installer directory file transitions for writable content
-filetrans_pattern(gravity_domain, gravity_install_home_t, gravity_home_t, dir, ".gravity")
-filetrans_pattern(gravity_domain, gravity_install_home_t, gravity_home_t, file, "crashreport.tgz")
+files_var_lib_filetrans(gravity_domain, gravity_home_t, dir, "gravity")
 logging_log_filetrans(gravity_domain, gravity_log_t, file)
-filetrans_pattern(gravity_domain, gravity_install_home_t, gravity_log_t, file, "gravity-system.log")
-filetrans_pattern(gravity_domain, gravity_home_t, gravity_unit_file_t, file, "gravity-installer.service")
-filetrans_pattern(gravity_domain, gravity_home_t, gravity_unit_file_t, file, "gravity-agent.service")
-filetrans_pattern(gravity_domain, gravity_home_t, gravity_var_run_t, sock_file, "installer.sock")
 filetrans_pattern(gravity_domain, gravity_container_home_t, container_var_lib_t, dir, "registry")
 filetrans_pattern(gravity_domain, gravity_container_home_t, container_var_lib_t, dir, "docker")
 filetrans_pattern(gravity_domain, gravity_container_home_t, gravity_container_runtime_exec_t, file, "planet")
@@ -222,27 +212,26 @@ create_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 delete_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 setattr_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 manage_files_pattern(gravity_domain, container_var_run_t, container_var_run_t)
-files_var_lib_filetrans(gravity_domain, gravity_home_t, dir, "gravity")
 # /root/.gravity
 userdom_admin_home_dir_filetrans(gravity_domain, gravity_home_t, dir, ".gravity")
 
-allow gravity_t container_var_run_t:sock_file { create unlink };
-allow gravity_t container_var_run_t:fifo_file { create setattr unlink };
-allow gravity_t container_var_run_t:file mounton;
+allow gravity_domain container_var_run_t:sock_file { create unlink };
+allow gravity_domain container_var_run_t:fifo_file { create setattr unlink };
+allow gravity_domain container_var_run_t:file mounton;
 allow gravity_domain gravity_unit_file_t:service manage_service_perms;
 allow gravity_container_runtime_t gravity_unit_file_t:file rw_file_perms;
 allow gravity_container_runtime_t gravity_unit_file_t:service manage_service_perms;
 
 # execute files inside /var/lib/gravity
-allow gravity_t gravity_home_t:file entrypoint;
+allow gravity_domain gravity_home_t:file entrypoint;
 exec_files_pattern(gravity_domain, gravity_home_t, gravity_home_t)
 # execute files inside planet rootfs
-allow gravity_t gravity_container_file_t:file entrypoint;
+allow gravity_domain gravity_container_file_t:file entrypoint;
 exec_files_pattern(gravity_domain, gravity_container_file_t, gravity_container_file_t)
 
 systemd_exec_systemctl(gravity_domain)
-systemd_create_unit_file_lnk(gravity_t)
-init_reload_services(gravity_t)
+systemd_create_unit_file_lnk(gravity_domain)
+init_reload_services(gravity_domain)
 init_status(gravity_domain)
 systemd_read_unit_files(gravity_domain)
 systemd_search_unit_dirs(gravity_domain)
@@ -278,12 +267,15 @@ optional_policy(`
 
 allow gravity_domain gravity_install_port_t:tcp_socket { listen name_bind };
 allow gravity_domain gravity_port_t:tcp_socket { listen name_bind };
-allow gravity_domain gravity_agent_port_t:tcp_socket { listen name_bind bind };
 
 # execute ifconfig and access network configuration
 sysnet_domtrans_ifconfig(gravity_domain)
 iptables_domtrans(gravity_domain)
-modutils_exec_insmod(gravity_domain)
+# FIXME: remove me
+#modutils_exec_insmod(gravity_domain)
+optional_policy(`
+  modutils_domtrans_insmod(gravity_domain)
+')
 usermanage_domtrans_groupadd(gravity_domain)
 usermanage_domtrans_useradd(gravity_domain)
 journalctl_domtrans(gravity_domain)
@@ -301,7 +293,7 @@ files_search_etc(gravity_domain)
 files_search_var_lib(gravity_domain)
 files_list_var_lib(gravity_domain)
 # write access for /etc/modules-load.d/
-files_rw_etc_files(gravity_domain)
+files_manage_etc_files(gravity_domain)
 
 # read/only access to lib/modules/* (preflight checks)
 files_load_kernel_modules(gravity_domain)
@@ -312,17 +304,43 @@ kernel_read_state(gravity_domain)
 kernel_read_network_state(gravity_domain)
 kernel_read_all_sysctls(gravity_domain)
 kernel_read_messages(gravity_t)
+kernel_read_messages(gravity_installer_t)
 
 # log to syslog
 logging_send_syslog_msg(gravity_t)
+logging_send_syslog_msg(gravity_installer_t)
 
-# allow unconfined domain to use gravity
+# allow unconfined/staff/sysadm domains to use gravity
 optional_policy(`
   gen_require(`
     role unconfined_r;
   ')
   unconfined_run_to(gravity_t, gravity_exec_t)
+  unconfined_run_to(gravity_installer_t, gravity_installer_exec_t)
   role_transition unconfined_r gravity_exec_t system_r;
+  role_transition unconfined_r gravity_installer_exec_t system_r;
+')
+
+optional_policy(`
+  gen_require(`
+    role sysadm_r;
+    type sysadm_t;
+  ')
+  gravity_run(sysadm_t, sysadm_r)
+  gravity_installer_domtrans(sysadm_t)
+  role_transition sysadm_r gravity_exec_t system_r;
+  role_transition sysadm_r gravity_installer_exec_t system_r;
+')
+
+optional_policy(`
+  gen_require(`
+    role staff_r;
+    type staff_t;
+  ')
+  gravity_run(staff_t, staff_r)
+  gravity_installer_domtrans(staff_t)
+  role_transition staff_r gravity_exec_t system_r;
+  role_transition staff_r gravity_installer_exec_t system_r;
 ')
 
 allow gravity_domain self:capability { sys_ptrace sys_admin sys_resource chown fowner fsetid setuid setgid setpcap sys_chroot };
@@ -335,43 +353,54 @@ allow gravity_domain self:capability { dac_override dac_read_search };
 allow gravity_domain gravity_container_home_t:dir mounton;
 
 allow gravity_domain self:netlink_audit_socket create;
+
+# SELinux-related rules
 # allow restorecon to relabel /var/lib/gravity
 allow setfiles_t gravity_home_t:file read;
 selinux_get_enforce_mode(gravity_t)
+selinux_get_enforce_mode(gravity_installer_t)
 seutil_read_file_contexts(gravity_domain)
 seutil_domtrans_setfiles(gravity_domain)
 # bootstrap SELinux configuration when running in gravity domain.
 # Should be a no-op but allow to avoid logging denials
-seutil_domtrans_loadpolicy(gravity_t)
+seutil_domtrans_loadpolicy(gravity_domain)
 # allow gravity to compute security context for executable
 # unfortunately `selinuxexeccon` is not labeled for the type of access it performs
-selinux_compute_create_context(gravity_domain)
+selinux_compute_create_context(gravity_installer_t)
 selinux_compute_create_context(gravity_container_runtime_t)
-# FIXME: switch the role (unconfined_r->system_r) when execve itself
-domain_role_change_exemption(gravity_t)
 
-dontaudit gravity_t gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
-allow gravity_t self:netlink_kobject_uevent_socket { getattr create bind setopt };
-dbus_system_bus_client(gravity_t)
-init_dbus_chat(gravity_t)
-init_start_transient_unit(gravity_t)
-init_stop_transient_unit(gravity_t)
+#############################
+#
+# gravity installer
+#
+# switch the role to system_r when restarting
+domain_role_change_exemption(gravity_installer_t)
+userdom_read_admin_home_files(gravity_installer_t)
+userdom_read_user_home_content_files(gravity_installer_t)
+allow gravity_installer_t gravity_home_t:service { manage_service_perms };
+
+dontaudit gravity_domain gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
+allow gravity_domain self:netlink_kobject_uevent_socket { getattr create bind setopt };
+dbus_system_bus_client(gravity_domain)
+init_dbus_chat(gravity_domain)
+init_start_transient_unit(gravity_domain)
+init_stop_transient_unit(gravity_domain)
 # start/stop planet scope unit
-systemd_start_systemd_services(gravity_t)
-fs_rw_tmpfs_files(gravity_t)
-fs_manage_cgroup_dirs(gravity_t)
-fs_manage_cgroup_files(gravity_t)
+systemd_start_systemd_services(gravity_domain)
+fs_rw_tmpfs_files(gravity_domain)
+fs_manage_cgroup_dirs(gravity_domain)
+fs_manage_cgroup_files(gravity_domain)
 
 # lsblk
-fs_getattr_tmpfs(gravity_t)
-udev_read_pid_files(gravity_t)
+fs_getattr_tmpfs(gravity_domain)
+udev_read_pid_files(gravity_domain)
 
-files_mounton_rootfs(gravity_t)
-files_unmount_rootfs(gravity_t)
-fs_relabelfrom_tmpfs(gravity_t)
-allow gravity_t container_share_t:dir mounton;
-allow gravity_t container_file_t:dir mounton;
-allow gravity_t container_file_t:filesystem { relabelto relabelfrom };
+files_mounton_rootfs(gravity_domain)
+files_unmount_rootfs(gravity_domain)
+fs_relabelfrom_tmpfs(gravity_domain)
+allow gravity_domain container_share_t:dir mounton;
+allow gravity_domain container_file_t:dir mounton;
+allow gravity_domain container_file_t:filesystem { relabelto relabelfrom };
 gravity_manage_executable_content(gravity_domain)
 allow gravity_domain container_runtime_exec_t:file { setattr unlink };
 
@@ -484,6 +513,8 @@ allow gravity_container_init_t gravity_container_file_t:file write;
 allow gravity_container_runtime_t gravity_container_file_t:chr_file mmap_file_perms;
 allow gravity_container_runtime_t gravity_container_file_t:filesystem { relabelto relabelfrom mount };
 allow gravity_container_runtime_t gravity_container_t:key create;
+allow gravity_container_runtime_t gravity_kubernetes_t:key create;
+allow gravity_container_runtime_t gravity_service_t:key create;
 gravity_domtrans(gravity_container_runtime_t)
 allow gravity_container_runtime_t gravity_domain:key create;
 
@@ -706,11 +737,10 @@ files_pid_filetrans(gravity_container_runtime_t, container_var_run_t, sock_file,
 #######################
 # gravity uninstall
 #
-allow gravity_t container_file_t:sock_file { getattr unlink };
-allow gravity_t container_log_t:file unlink;
-allow gravity_t container_share_t:blk_file { getattr unlink };
-allow gravity_t container_share_t:chr_file { getattr unlink };
-#allow gravity_t var_lib_t:dir { remove_name write }; # FIXME
+allow gravity_domain container_file_t:sock_file { getattr unlink };
+allow gravity_domain container_log_t:file unlink;
+allow gravity_domain container_share_t:blk_file { getattr unlink };
+allow gravity_domain container_share_t:chr_file { getattr unlink };
 
 #######################
 # gravity report
@@ -719,12 +749,12 @@ allow gravity_t container_share_t:chr_file { getattr unlink };
 domain_read_all_domains_state(gravity_domain)
 ps_process_pattern(gravity_domain, domain)
 # df -i
-allow gravity_t configfs_t:dir { list_dir_perms };
+allow gravity_domain configfs_t:dir { list_dir_perms };
 # store bits from /etc
-allow gravity_t selinux_config_t:dir { list_dir_perms };
+allow gravity_domain selinux_config_t:dir { list_dir_perms };
 # gravity report
 # system export-runtime-journal: mount /var/lib/gravity/local/packages/unpacked/gravitational.io/planet/<version>/rootfs/tmp/journal
-allow gravity_t gravity_container_file_t:dir mounton;
+allow gravity_domain gravity_container_file_t:dir mounton;
 
 gen_require(`
   type staff_t;
@@ -732,7 +762,7 @@ gen_require(`
 ')
 gravity_role(staff_r, staff_t)
 
-allow gravity_t init_t:service { disable enable stop };
+allow gravity_domain init_t:service { disable enable stop };
 
 gen_require(`
   type rpc_pipefs_t;
