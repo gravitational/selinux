@@ -378,6 +378,7 @@ domain_role_change_exemption(gravity_installer_t)
 userdom_read_admin_home_files(gravity_installer_t)
 userdom_read_user_home_content_files(gravity_installer_t)
 allow gravity_installer_t gravity_home_t:service { manage_service_perms };
+seutil_dontaudit_read_file_contexts(gravity_installer_t)
 
 dontaudit gravity_domain gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
 allow gravity_domain self:netlink_kobject_uevent_socket { getattr create bind setopt };
@@ -517,6 +518,8 @@ allow gravity_container_runtime_t gravity_kubernetes_t:key create;
 allow gravity_container_runtime_t gravity_service_t:key create;
 gravity_domtrans(gravity_container_runtime_t)
 allow gravity_container_runtime_t gravity_domain:key create;
+# planet can waitid on all started processes
+allow domain gravity_container_runtime_t:process sigchld;
 
 ##################
 # gravity services
