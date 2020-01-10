@@ -161,7 +161,7 @@ interface(`gravity_search_state',`
     type gravity_home_t;
   ')
 
-  allow $1 gravity_home_t:dir search_dir_perms;
+  allow $1 gravity_home_t:dir { search_dir_perms };
   files_search_var_lib($1)
 ')
 
@@ -180,7 +180,8 @@ interface(`gravity_read_state_files',`
     type gravity_home_t;
   ')
 
-  files_search_var_lib($1)
+  gravity_search_state($1)
+  list_dirs_pattern($1, gravity_home_t, gravity_home_t)
   read_files_pattern($1, gravity_home_t, gravity_home_t)
   read_lnk_files_pattern($1, gravity_home_t, gravity_home_t)
 ')
@@ -356,3 +357,62 @@ interface(`gravity_manage_executable_content',`
   # TODO
   allow $1 gravity_executable_domain:file { setattr unlink };
 ')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	system container process domain running inside the gravity container
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+#
+template(`gravity_system_container_domain_template',`
+	gen_require(`
+		attribute container_domain;
+		attribute container_net_domain;
+	')
+
+	type $1_t, container_domain, container_net_domain;
+	role system_r types $1_t;
+	domain_type($1_t)
+	domain_user_exemption_target($1_t)
+	kernel_read_all_proc($1_t)
+
+  ifdef(`enable_mls',`
+    init_ranged_daemon_domain($1_t, $1_exec_t, s0 - mls_systemhigh)
+  ')
+  mls_file_read_to_clearance($1_t)
+  mls_file_write_to_clearance($1_t)
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	container process domain running inside the gravity container
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+#
+template(`gravity_container_domain_template',`
+	gen_require(`
+		attribute container_domain;
+		attribute container_net_domain;
+	')
+
+	type $1_t, container_domain, container_net_domain;
+	domain_type($1_t)
+	domain_user_exemption_target($1_t)
+	mls_rangetrans_target($1_t)
+	#Allow processes running inside the runtime container to have visibility into docker containers
+	#mcs_constrained($1_t)
+	role system_r types $1_t;
+	kernel_read_all_proc($1_t)
+')
+
+
