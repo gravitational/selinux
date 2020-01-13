@@ -5,8 +5,8 @@ interface(`gravity_home_content_filetrans',`
 		type gravity_home_t;
 	')
 
-	filetrans_pattern($1, user_home_t, $2, $3, $4)
-	allow $1 gravity_home_t:dir search_dir_perms;
+	filetrans_pattern($1, gravity_home_t, $2, $3, $4)
+	allow $1 gravity_home_t:dir { search_dir_perms };
 	files_search_home($1)
 ')
 

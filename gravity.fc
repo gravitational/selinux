@@ -12,6 +12,15 @@
 /etc/systemd/system/gravity-installer\.service -l	gen_context(system_u:object_r:gravity_unit_file_t,s0)
 /usr/lib/systemd/system/gravity-agent\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
 /usr/lib/systemd/system/gravity-installer\.service -l	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+# inslide planet
+/etc/systemd/system/etcd\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/kube-kubelet\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/kube-apiserver\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/kube-scheduler\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/kube-proxy\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/kube-controller-manager\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/flanneld\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/coredns\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
 
 /var/run/planet\.socket	-s	gen_context(system_u:object_r:container_var_run_t,s0)
 /run/planet\.socket	-s	gen_context(system_u:object_r:container_var_run_t,s0)
@@ -32,6 +41,7 @@
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/node-problem-detector	-- gen_context(system_u:object_r:gravity_kubernetes_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/local/bin/kubectl	-- gen_context(system_u:object_r:gravity_kubernetes_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/systemd	-l gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
+/var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/systemctl	-- gen_context(system_u:object_r:gravity_container_systemctl_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/systemd-.*	-- gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/docker.* -- gen_context(system_u:object_r:container_runtime_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/runc -- gen_context(system_u:object_r:container_runtime_exec_t,s0)

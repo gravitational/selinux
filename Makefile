@@ -2,6 +2,8 @@ MODULES?=${TARGETS:=.pp.bz2}
 SHAREDIR?=/usr/share
 AWSCLI?=aws
 TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
+SOURCES=gravity.te gravity.if gravity.fc
+CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
 VERSION?=6.0.0
@@ -15,11 +17,11 @@ $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 	@echo Compressing $^ -\> $@
 	bzip2 -f -9 -c $^ > $@
 
-$(OUTPUT)/gravity.pp: gravity.te | $(OUTPUT)
+$(OUTPUT)/gravity.pp: $(SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	mv $(@F) $@
 
-$(OUTPUT)/container.pp: container-selinux/container.te | $(OUTPUT)
+$(OUTPUT)/container.pp: $(CONTAINER_SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D -m 644 container-selinux/container.if ${DESTDIR}${SHAREDIR}/selinux/devel/include/services/container.if
 	mv $(@F) $@
