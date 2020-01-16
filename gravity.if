@@ -1,13 +1,13 @@
 ## <summary>policy for gravity</summary>
 
 interface(`gravity_home_content_filetrans',`
-	gen_require(`
-		type gravity_home_t;
-	')
+  gen_require(`
+    type gravity_home_t;
+  ')
 
-	filetrans_pattern($1, gravity_home_t, $2, $3, $4)
-	allow $1 gravity_home_t:dir { search_dir_perms };
-	files_search_home($1)
+  filetrans_pattern($1, gravity_home_t, $2, $3, $4)
+  allow $1 gravity_home_t:dir { search_dir_perms };
+  files_search_home($1)
 ')
 
 interface(`gravity_roletrans_gravity',`
@@ -361,6 +361,36 @@ interface(`gravity_manage_executable_content',`
 ########################################
 ## <summary>
 ##	Creates types and rules for a
+##	system gravity domain
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+## FIXME: due to behavior of systemd-sysusers which seems to require
+## access and create passwd_file_t (shadow_t, etc.) I'll resort to enabling
+## gravity domains management access to these locations.
+## This needs more tinkering to remove this restriction. Once removed,
+## read permissions (auth_read_{passwd,shadow}) should suffice
+#
+template(`gravity_domain_template',`
+  gen_require(`
+    attribute gravity_domain;
+    attribute gravity_executable_domain;
+  ')
+
+  type $1_t, gravity_domain;
+  type $1_exec_t, gravity_executable_domain;
+  init_daemon_domain($1_t, $1_exec_t)
+
+  auth_manage_passwd($1_t)
+  auth_manage_shadow($1_t)
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
 ##	system container process domain running inside the gravity container
 ## </summary>
 ## <param name="prefix">
@@ -370,16 +400,24 @@ interface(`gravity_manage_executable_content',`
 ## </param>
 #
 template(`gravity_system_container_domain_template',`
-	gen_require(`
-		attribute container_domain;
-		attribute container_net_domain;
-	')
+  gen_require(`
+    attribute container_domain;
+    attribute container_net_domain;
+    attribute gravity_container_domain;
+    attribute gravity_executable_domain;
+  ')
 
-	type $1_t, container_domain, container_net_domain;
-	role system_r types $1_t;
-	domain_type($1_t)
-	domain_user_exemption_target($1_t)
-	kernel_read_all_proc($1_t)
+  type $1_t, container_domain, container_net_domain;
+  type $1_exec_t, gravity_executable_domain;
+  role system_r types $1_t;
+  init_daemon_domain($1_t, $1_exec_t)
+  domain_type($1_t)
+  domain_user_exemption_target($1_t)
+  kernel_read_all_proc($1_t)
+  auth_read_passwd($1_t)
+  auth_read_shadow($1_t)
+
+  typeattribute $1_t gravity_container_domain;
 
   ifdef(`enable_mls',`
     init_ranged_daemon_domain($1_t, $1_exec_t, s0 - mls_systemhigh)
@@ -400,19 +438,21 @@ template(`gravity_system_container_domain_template',`
 ## </param>
 #
 template(`gravity_container_domain_template',`
-	gen_require(`
-		attribute container_domain;
-		attribute container_net_domain;
-	')
+  gen_require(`
+    attribute container_domain;
+    attribute container_net_domain;
+    attribute gravity_container_domain;
+  ')
 
-	type $1_t, container_domain, container_net_domain;
-	domain_type($1_t)
-	domain_user_exemption_target($1_t)
-	mls_rangetrans_target($1_t)
-	#Allow processes running inside the runtime container to have visibility into docker containers
-	#mcs_constrained($1_t)
-	role system_r types $1_t;
-	kernel_read_all_proc($1_t)
+  type $1_t, container_domain, container_net_domain;
+  typeattribute $1_t gravity_container_domain;
+  domain_type($1_t)
+  domain_user_exemption_target($1_t)
+  mls_rangetrans_target($1_t)
+  #Allow processes running inside the runtime container to have visibility into docker containers
+  #mcs_constrained($1_t)
+  role system_r types $1_t;
+  kernel_read_all_proc($1_t)
 ')
 
 
