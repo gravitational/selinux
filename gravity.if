@@ -245,7 +245,30 @@ interface(`gravity_read_container_files',`
   read_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
 ')
 
+########################################
+## <summary>
+##	Manage gravity container files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_manage_files',`
+  gen_require(`
+    type gravity_container_home_t;
+  ')
 
+  files_search_var_lib($1)
+  manage_dirs_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_chr_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_blk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_sock_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_fifo_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+')
 
 ########################################
 ## <summary>
@@ -382,6 +405,7 @@ template(`gravity_domain_template',`
 
   type $1_t, gravity_domain;
   type $1_exec_t, gravity_executable_domain;
+  application_domain($1_t, $1_exec_t)
   init_daemon_domain($1_t, $1_exec_t)
 
   auth_manage_passwd($1_t)
@@ -454,5 +478,3 @@ template(`gravity_container_domain_template',`
   role system_r types $1_t;
   kernel_read_all_proc($1_t)
 ')
-
-
