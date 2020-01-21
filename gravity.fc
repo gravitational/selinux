@@ -40,6 +40,7 @@
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/dbus-.*	-- gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/sbin/rpcbind	-- gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/lib/systemd/systemd.* -- gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
+/var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/lib/systemd/system-generators/system.* -- gen_context(system_u:object_r:gravity_container_init_exec_t,s0)
 # /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/lib/systemd/system/etcd.*\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
 # /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/lib/systemd/system/flanneld\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
 # /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/lib/systemd/system/coredns\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)

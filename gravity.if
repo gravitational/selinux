@@ -235,7 +235,7 @@ interface(`gravity_manage_state_dirs',`
 ##	</summary>
 ## </param>
 #
-interface(`gravity_read_container_files',`
+interface(`gravity_container_read_state_files',`
   gen_require(`
     type gravity_container_home_t;
   ')
@@ -243,6 +243,27 @@ interface(`gravity_read_container_files',`
   files_search_var_lib($1)
   read_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   read_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+')
+
+########################################
+## <summary>
+##	Read gravity container files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_read_files',`
+  gen_require(`
+    type gravity_container_home_t;
+    type gravity_container_file_t;
+  ')
+
+
+  gravity_container_read_state_files($1)
+  search_dirs_pattern($1, gravity_container_home_t, gravity_container_file_t)
 ')
 
 ########################################
@@ -258,16 +279,20 @@ interface(`gravity_read_container_files',`
 interface(`gravity_container_manage_files',`
   gen_require(`
     type gravity_container_home_t;
+    type gravity_container_file_t;
   ')
 
   files_search_var_lib($1)
   manage_dirs_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_chr_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
-  manage_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_blk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_sock_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_fifo_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+
+  manage_chr_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
+  manage_blk_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
 ')
 
 ########################################
