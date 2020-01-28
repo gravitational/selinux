@@ -86,6 +86,8 @@ interface(`gravity_role',`
 
   admin_pattern($2, gravity_home_t)
   admin_pattern($2, gravity_log_t)
+  admin_pattern($2, gravity_container_home_t)
+  admin_pattern($2, gravity_kubelet_home_t)
   allow $2 gravity_unit_file_t:service manage_service_perms;
 ')
 
@@ -241,8 +243,11 @@ interface(`gravity_container_read_state_files',`
   ')
 
   files_search_var_lib($1)
+  list_dirs_pattern($1, gravity_container_home_t, gravity_container_home_t)
   read_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   read_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  list_dirs_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
+  read_files_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
 ')
 
 ########################################
@@ -260,7 +265,6 @@ interface(`gravity_container_read_files',`
     type gravity_container_home_t;
     type gravity_container_file_t;
   ')
-
 
   gravity_container_read_state_files($1)
   search_dirs_pattern($1, gravity_container_home_t, gravity_container_file_t)
@@ -280,6 +284,7 @@ interface(`gravity_container_manage_files',`
   gen_require(`
     type gravity_container_home_t;
     type gravity_container_file_t;
+    type gravity_kubelet_home_t;
   ')
 
   files_search_var_lib($1)
@@ -290,7 +295,8 @@ interface(`gravity_container_manage_files',`
   manage_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_sock_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   manage_fifo_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
-
+  manage_dirs_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
+  manage_files_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
   manage_chr_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
   manage_blk_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
 ')
