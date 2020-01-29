@@ -20,7 +20,7 @@
 /var/lib/gravity/planet(/.*)?	 gen_context(system_u:object_r:gravity_container_home_t,s0)
 /var/lib/gravity/planet/kubelet(/.*)?	 gen_context(system_u:object_r:gravity_kubelet_home_t,s0)
 /var/lib/gravity/planet/kubelet/device-plugins(/.*)?	 gen_context(system_u:object_r:container_file_t,s0)
-/var/lib/gravity/planet/kubelet/plugin_registry(/.*)?	 gen_context(system_u:object_r:container_file_t,s0)
+/var/lib/gravity/planet/kubelet/plugins_registry(/.*)?	 gen_context(system_u:object_r:container_file_t,s0)
 /var/lib/gravity/planet/kubelet/plugins(/.*)?	 gen_context(system_u:object_r:container_file_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs(/.*)?	gen_context(system_u:object_r:gravity_container_file_t,s0)
 /var/lib/gravity/local/packages/unpacked/gravitational\.io/planet/.*/rootfs/usr/bin/planet	-- gen_context(system_u:object_r:gravity_container_runtime_exec_t,s0)

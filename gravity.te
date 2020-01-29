@@ -231,10 +231,10 @@ gravity_home_content_filetrans(gravity_domain, gravity_var_run_t, sock_file, "in
 
 files_var_lib_filetrans(gravity_domain, gravity_home_t, dir, "gravity")
 logging_log_filetrans(gravity_domain, gravity_log_t, file)
-filetrans_pattern(gravity_domain, gravity_container_home_t, container_var_lib_t, dir, "registry")
-filetrans_pattern(gravity_domain, gravity_container_home_t, container_var_lib_t, dir, "docker")
-filetrans_pattern(gravity_domain, gravity_container_home_t, gravity_container_runtime_exec_t, file, "planet")
-filetrans_pattern(gravity_domain, gravity_container_home_t, gravity_exec_t, file, "gravity")
+gravity_container_home_content_filetrans(gravity_domain, container_var_lib_t, dir, "registry")
+gravity_container_home_content_filetrans(gravity_domain, container_var_lib_t, dir, "docker")
+gravity_container_home_content_filetrans(gravity_domain, gravity_container_runtime_exec_t, file, "planet")
+gravity_container_home_content_filetrans(gravity_domain, gravity_exec_t, file, "gravity")
 systemd_unit_file_filetrans(gravity_domain, gravity_unit_file_t, { file lnk_file })
 manage_sock_files_pattern(gravity_domain, gravity_var_run_t, gravity_var_run_t)
 
@@ -322,6 +322,7 @@ gravity_container_runtime_domtrans(gravity_domain)
 allow gravity_domain gravity_exec_t:file { create write rename };
 corecmd_bin_filetrans(gravity_domain, gravity_exec_t, file)
 corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "kubectl")
+corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "helm")
 
 sysnet_read_config(gravity_domain)
 files_search_etc(gravity_domain)
@@ -602,14 +603,6 @@ allow gravity_container_init_t etc_t:lnk_file { create rename unlink };
 # /usr/lib/systemd/system-generators/systemd-*
 allow gravity_container_t self:process setfscreate;
 
-#auth_read_login_records(gravity_container_init_t)
-#auth_write_login_records(gravity_container_init_t)
-#auth_relabel_faillog(gravity_container_init_t)
-#auth_relabel_login_records(gravity_container_init_t)
-#files_create_var_lib_dirs(gravity_container_init_t)
-#allow gravity_container_init_t lastlog_t:file relabelfrom;
-#allow gravity_container_init_t var_t:dir create_dir_perms;
-
 # systemctl
 allow gravity_container_init_t gravity_container_systemctl_t:dir search;
 allow gravity_container_systemctl_t gravity_container_init_t:file { read_file_perms };
@@ -813,16 +806,14 @@ allow gravity_kubernetes_t gravity_container_home_t:dir { getattr search open re
 #==================================
 container_manage_files(gravity_kubernetes_t)
 admin_pattern(gravity_kubernetes_t, gravity_kubelet_home_t)
+gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "plugins")
+gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "plugins_registry")
+gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "device-plugins")
 allow gravity_kubernetes_t gravity_kubelet_home_t:dir mounton;
 # relabel <root-dir>/{device-plugins,plugins,plugin_registry}
 allow gravity_kubernetes_t container_file_t:dir relabelto;
 # create /var/lib/kubelet/.*
 allow gravity_kubernetes_t gravity_service_t:dir { search_dir_perms };
-allow gravity_kubernetes_t gravity_container_file_t:dir { getattr setattr search create remove_name mounton rmdir };
-allow gravity_kubernetes_t gravity_container_file_t:file { manage_file_perms };
-allow gravity_kubernetes_t gravity_container_file_t:sock_file { getattr read open create write rename unlink };
-allow gravity_kubernetes_t gravity_container_file_t:chr_file { getattr read open create write ioctl };
-allow gravity_kubernetes_t gravity_container_file_t:lnk_file { getattr read open create write ioctl rename unlink };
 # append: kube-apiserver, audit.log
 allow gravity_kubernetes_t gravity_container_home_t:file { getattr read open create append };
 allow gravity_kubernetes_t gravity_container_init_t:dir { search_dir_perms };

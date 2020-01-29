@@ -227,6 +227,26 @@ interface(`gravity_manage_state_dirs',`
   manage_dirs_pattern($1, gravity_home_t, gravity_home_t)
 ')
 
+interface(`gravity_container_home_content_filetrans',`
+  gen_require(`
+    type gravity_container_home_t;
+  ')
+
+  filetrans_pattern($1, gravity_container_home_t, $2, $3, $4)
+  allow $1 gravity_container_home_t:dir { search_dir_perms };
+  allow $1 gravity_container_home_t:lnk_file { read_lnk_file_perms };
+')
+
+interface(`gravity_kubelet_home_content_filetrans',`
+  gen_require(`
+    type gravity_kubelet_home_t;
+  ')
+
+  filetrans_pattern($1, gravity_kubelet_home_t, $2, $3, $4)
+  allow $1 gravity_kubelet_home_t:dir { search_dir_perms };
+  allow $1 gravity_kubelet_home_t:lnk_file { read_lnk_file_perms };
+')
+
 ########################################
 ## <summary>
 ##	Read gravity container state files.
