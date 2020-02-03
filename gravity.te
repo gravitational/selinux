@@ -149,6 +149,8 @@ admin_pattern(gravity_domain, gravity_container_home_t)
 admin_pattern(gravity_domain, gravity_kubelet_home_t)
 admin_pattern(gravity_domain, gravity_container_file_t)
 manage_files_pattern(gravity_domain, gravity_log_t, gravity_log_t)
+manage_chr_files_pattern(gravity_domain, gravity_container_home_t, gravity_container_home_t)
+manage_blk_files_pattern(gravity_domain, gravity_container_home_t, gravity_container_home_t)
 manage_chr_files_pattern(gravity_domain, gravity_container_file_t, gravity_container_file_t)
 manage_blk_files_pattern(gravity_domain, gravity_container_file_t, gravity_container_file_t)
 
@@ -225,6 +227,19 @@ userdom_user_home_content_filetrans(gravity_domain, gravity_home_t, file)
 userdom_user_home_content_filetrans(gravity_domain, gravity_exec_t, file, "gravity")
 userdom_user_home_content_filetrans(gravity_domain, gravity_log_t, file, "gravity-system.log")
 userdom_user_home_content_filetrans(gravity_domain, gravity_log_t, file, "gravity-install.log")
+
+userdom_user_home_dir_filetrans(gravity_domain, gravity_home_t, dir, ".gravity")
+userdom_user_home_dir_filetrans(gravity_domain, gravity_home_t, file)
+userdom_user_home_dir_filetrans(gravity_domain, gravity_exec_t, file, "gravity")
+userdom_user_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-system.log")
+userdom_user_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-install.log")
+
+userdom_admin_home_dir_filetrans(gravity_domain, gravity_home_t, dir, ".gravity")
+userdom_admin_home_dir_filetrans(gravity_domain, gravity_home_t, file)
+userdom_admin_home_dir_filetrans(gravity_domain, gravity_exec_t, file, "gravity")
+userdom_admin_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-system.log")
+userdom_admin_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-install.log")
+
 gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-installer.service")
 gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-agent.service")
 gravity_home_content_filetrans(gravity_domain, gravity_var_run_t, sock_file, "installer.sock")
@@ -254,8 +269,6 @@ create_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 delete_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 setattr_dirs_pattern(gravity_domain, container_var_run_t, container_var_run_t)
 manage_files_pattern(gravity_domain, container_var_run_t, container_var_run_t)
-# /root/.gravity
-userdom_admin_home_dir_filetrans(gravity_domain, gravity_home_t, dir, ".gravity")
 # /usr/local/share/gravity
 filetrans_pattern(gravity_domain, usr_t, gravity_home_t, dir, "gravity")
 
@@ -387,6 +400,7 @@ allow gravity_domain self:capability { dac_override dac_read_search };
 
 # mount systemd journals inside rootfs
 allow gravity_domain gravity_container_home_t:dir mounton;
+allow gravity_domain gravity_home_t:dir mounton;
 
 allow gravity_domain self:netlink_audit_socket create;
 
