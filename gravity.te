@@ -417,6 +417,7 @@ seutil_domtrans_loadpolicy(gravity_domain)
 # allow gravity to compute security context for executable
 # unfortunately `selinuxexeccon` is not labeled for the type of access it performs
 selinux_compute_create_context(gravity_installer_t)
+allow gravity_domain self:process setfscreate;
 
 #############################
 #
@@ -444,6 +445,15 @@ allow gravity_installer_t bin_t:lnk_file unlink;
 dontaudit gravity_installer_t self:capability net_admin;
 dontaudit gravity_domain gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
 allow gravity_domain self:netlink_kobject_uevent_socket { getattr create bind setopt };
+# allow installer to reset/recreate agent service in /etc/systemd/system if
+# there's a unit that had not been correctly labeled (as gravity_unit_file_t).
+# The reason we're opening them for the whole gravity domain is that there are
+# still places (like agent deployment) that might get tripped by existing service unit
+# files without the expected label
+allow gravity_domain systemd_unit_file_t:service { disable enable status stop };
+allow gravity_domain systemd_unit_file_t:file { unlink rw_file_perms };
+# do not audit the attempt to create /writeable
+dontaudit gravity_installer_t root_t:dir { write };
 
 # lsblk
 fs_getattr_tmpfs(gravity_domain)
@@ -939,3 +949,6 @@ allow gravity_domain configfs_t:dir { list_dir_perms };
 allow gravity_domain selinux_config_t:dir { list_dir_perms };
 # system export-runtime-journal: mount /var/lib/gravity/local/packages/unpacked/gravitational.io/planet/<version>/rootfs/tmp/journal
 allow gravity_domain gravity_container_file_t:dir mounton;
+# bash trying to load the .bashrc from the user's home (root in this case)
+# when running commands wrapped as a script
+dontaudit gravity_t admin_home_t:file read;
