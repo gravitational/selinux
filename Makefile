@@ -2,27 +2,37 @@ MODULES?=${TARGETS:=.pp.bz2}
 SHAREDIR?=/usr/share
 AWSCLI?=aws
 TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
+SOURCES=gravity.te gravity.if gravity.fc
+CONTAINER_BUILD_ARGS?=
+CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
 VERSION?=6.0.0
 BUILD_BUCKET_URL?=s3://clientbuilds.gravitational.io
 OUTPUT?=output
-CONTAINER_RUNTIME:=$(shell command -v podman 2> /dev/null || echo docker)
+CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
+COPY:=cp
 
-all: build
+all: build $(OUTPUT)/gravity.statedir.fc.template
 
 $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 	@echo Compressing $^ -\> $@
 	bzip2 -f -9 -c $^ > $@
 
-$(OUTPUT)/gravity.pp: gravity.te | $(OUTPUT)
+$(OUTPUT)/gravity.pp: $(SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	mv $(@F) $@
 
-$(OUTPUT)/container.pp: container-selinux/container.te | $(OUTPUT)
+$(OUTPUT)/container.pp: $(CONTAINER_SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D -m 644 container-selinux/container.if ${DESTDIR}${SHAREDIR}/selinux/devel/include/services/container.if
 	mv $(@F) $@
+
+$(OUTPUT)/gravity.statedir.fc.template: $(OUTPUT)/gravity.pp
+	$(COPY) $(@F) $@
+
+gravity.fc: gravity.fc.template gravity.statedir.fc.template values.toml
+	tpl -values values.toml -template gravity.fc.template -template gravity.statedir.fc.template -output $@
 
 .PHONY: clean
 clean:
@@ -56,7 +66,7 @@ build: buildbox
 
 .PHONY: buildbox
 buildbox:
-	${CONTAINER_RUNTIME} build -t ${BUILDBOX} -f Dockerfile .
+	${CONTAINER_RUNTIME} build -t ${BUILDBOX} ${CONTAINER_BUILD_ARGS} -f Dockerfile .
 
 .PHONY: publish
 publish: build

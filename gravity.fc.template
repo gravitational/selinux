@@ -1,0 +1,19 @@
+/usr/bin/gravity		--	gen_context(system_u:object_r:gravity_exec_t,s0)
+/usr/bin/kubectl	-l	gen_context(system_u:object_r:gravity_kubernetes_exec_t,s0)
+/usr/local/bin/gravity		--	gen_context(system_u:object_r:gravity_exec_t,s0)
+/usr/local/share/gravity(/.*)?		gen_context(system_u:object_r:gravity_home_t,s0)
+/usr/lib/systemd/system/gravity__.*\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/usr/lib/systemd/system/gravity-agent\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/usr/lib/systemd/system/gravity-installer\.service -l	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/gravity-(installer|agent)\.service -l	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/gravity__.*\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/gravity-agent\.service --	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/etc/systemd/system/gravity-installer\.service -l	gen_context(system_u:object_r:gravity_unit_file_t,s0)
+/var/log/gravity-(install|system)\.log	--	gen_context(system_u:object_r:gravity_log_t,s0)
+
+# Planet
+/var/run/planet(/.*)?	gen_context(system_u:object_r:container_var_run_t,s0)
+/var/run/planet\.socket	-s	gen_context(system_u:object_r:container_var_run_t,s0)
+/run/planet\.socket	-s	gen_context(system_u:object_r:container_var_run_t,s0)
+
+{{template "gravity.statedir.fc.template" .}}

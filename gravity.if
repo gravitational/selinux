@@ -1,5 +1,25 @@
 ## <summary>policy for gravity</summary>
 
+interface(`gravity_home_content_filetrans',`
+  gen_require(`
+    type gravity_home_t;
+  ')
+
+  filetrans_pattern($1, gravity_home_t, $2, $3, $4)
+  allow $1 gravity_home_t:dir { search_dir_perms };
+  files_search_home($1)
+')
+
+interface(`gravity_roletrans_gravity',`
+  gen_require(`
+    role gravity_roles;
+    type gravity_t, gravity_exec_t;
+  ')
+  allow $1 gravity_roles;
+  role_transition $1 gravity_exec_t gravity_roles;
+  gravity_domtrans($2)
+')
+
 ########################################
 ## <summary>
 ##	Execute gravity in the gravity domain and allow
@@ -49,7 +69,6 @@ interface(`gravity_role',`
     type gravity_container_runtime_t;
     type gravity_container_runtime_exec_t;
     type gravity_home_t;
-    type gravity_install_home_t;
     type gravity_log_t;
     type gravity_unit_file_t;
   ')
@@ -66,8 +85,9 @@ interface(`gravity_role',`
   allow $2 gravity_domain:process { ptrace signal_perms };
 
   admin_pattern($2, gravity_home_t)
-  admin_pattern($2, gravity_install_home_t)
   admin_pattern($2, gravity_log_t)
+  admin_pattern($2, gravity_container_home_t)
+  admin_pattern($2, gravity_kubelet_home_t)
   allow $2 gravity_unit_file_t:service manage_service_perms;
 ')
 
@@ -88,6 +108,25 @@ interface(`gravity_domtrans',`
 
   corecmd_search_bin($1)
   domtrans_pattern($1, gravity_exec_t, gravity_t)
+')
+
+########################################
+## <summary>
+##	Execute gravity installer in the specified domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`gravity_installer_domtrans',`
+  gen_require(`
+    type gravity_installer_t, gravity_installer_exec_t;
+  ')
+
+  corecmd_search_bin($1)
+  domtrans_pattern($1, gravity_installer_exec_t, gravity_installer_t)
 ')
 
 ######################################
@@ -124,7 +163,7 @@ interface(`gravity_search_state',`
     type gravity_home_t;
   ')
 
-  allow $1 gravity_home_t:dir search_dir_perms;
+  allow $1 gravity_home_t:dir { search_dir_perms };
   files_search_var_lib($1)
 ')
 
@@ -143,7 +182,8 @@ interface(`gravity_read_state_files',`
     type gravity_home_t;
   ')
 
-  files_search_var_lib($1)
+  gravity_search_state($1)
+  list_dirs_pattern($1, gravity_home_t, gravity_home_t)
   read_files_pattern($1, gravity_home_t, gravity_home_t)
   read_lnk_files_pattern($1, gravity_home_t, gravity_home_t)
 ')
@@ -187,6 +227,26 @@ interface(`gravity_manage_state_dirs',`
   manage_dirs_pattern($1, gravity_home_t, gravity_home_t)
 ')
 
+interface(`gravity_container_home_content_filetrans',`
+  gen_require(`
+    type gravity_container_home_t;
+  ')
+
+  filetrans_pattern($1, gravity_container_home_t, $2, $3, $4)
+  allow $1 gravity_container_home_t:dir { search_dir_perms };
+  allow $1 gravity_container_home_t:lnk_file { read_lnk_file_perms };
+')
+
+interface(`gravity_kubelet_home_content_filetrans',`
+  gen_require(`
+    type gravity_kubelet_home_t;
+  ')
+
+  filetrans_pattern($1, gravity_kubelet_home_t, $2, $3, $4)
+  allow $1 gravity_kubelet_home_t:dir { search_dir_perms };
+  allow $1 gravity_kubelet_home_t:lnk_file { read_lnk_file_perms };
+')
+
 ########################################
 ## <summary>
 ##	Read gravity container state files.
@@ -197,17 +257,69 @@ interface(`gravity_manage_state_dirs',`
 ##	</summary>
 ## </param>
 #
-interface(`gravity_read_container_files',`
+interface(`gravity_container_read_state_files',`
   gen_require(`
     type gravity_container_home_t;
   ')
 
   files_search_var_lib($1)
+  list_dirs_pattern($1, gravity_container_home_t, gravity_container_home_t)
   read_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
   read_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  list_dirs_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
+  read_files_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
 ')
 
+########################################
+## <summary>
+##	Read gravity container files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_read_files',`
+  gen_require(`
+    type gravity_container_home_t;
+    type gravity_container_file_t;
+  ')
 
+  gravity_container_read_state_files($1)
+  search_dirs_pattern($1, gravity_container_home_t, gravity_container_file_t)
+')
+
+########################################
+## <summary>
+##	Manage gravity container files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_manage_files',`
+  gen_require(`
+    type gravity_container_home_t;
+    type gravity_container_file_t;
+    type gravity_kubelet_home_t;
+  ')
+
+  files_search_var_lib($1)
+  manage_dirs_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_chr_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_blk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_lnk_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_sock_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_fifo_files_pattern($1, gravity_container_home_t, gravity_container_home_t)
+  manage_dirs_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
+  manage_files_pattern($1, gravity_kubelet_home_t, gravity_kubelet_home_t)
+  manage_chr_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
+  manage_blk_files_pattern($1, gravity_container_file_t, gravity_container_file_t)
+')
 
 ########################################
 ## <summary>
@@ -318,4 +430,102 @@ interface(`gravity_manage_executable_content',`
 
   # TODO
   allow $1 gravity_executable_domain:file { setattr unlink };
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	system gravity domain
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+## FIXME: due to behavior of systemd-sysusers which seems to require
+## access and create passwd_file_t (shadow_t, etc.) I'll resort to enabling
+## gravity domains management access to these locations.
+## This needs more tinkering to remove this restriction. Once removed,
+## read permissions (auth_read_{passwd,shadow}) should suffice
+#
+template(`gravity_domain_template',`
+  gen_require(`
+    attribute gravity_domain;
+    attribute gravity_executable_domain;
+  ')
+
+  type $1_t, gravity_domain;
+  type $1_exec_t, gravity_executable_domain;
+  application_domain($1_t, $1_exec_t)
+  init_daemon_domain($1_t, $1_exec_t)
+
+  auth_manage_passwd($1_t)
+  auth_manage_shadow($1_t)
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	system container process domain running inside the gravity container
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+#
+template(`gravity_system_container_domain_template',`
+  gen_require(`
+    attribute container_domain;
+    attribute container_net_domain;
+    attribute gravity_container_domain;
+    attribute gravity_executable_domain;
+  ')
+
+  type $1_t, container_domain, container_net_domain;
+  type $1_exec_t, gravity_executable_domain;
+  role system_r types $1_t;
+  init_daemon_domain($1_t, $1_exec_t)
+  domain_type($1_t)
+  domain_user_exemption_target($1_t)
+  kernel_read_all_proc($1_t)
+  auth_read_passwd($1_t)
+  auth_read_shadow($1_t)
+
+  typeattribute $1_t gravity_container_domain;
+
+  ifdef(`enable_mls',`
+    init_ranged_daemon_domain($1_t, $1_exec_t, s0 - mls_systemhigh)
+  ')
+  mls_file_read_to_clearance($1_t)
+  mls_file_write_to_clearance($1_t)
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	container process domain running inside the gravity container
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+#
+template(`gravity_container_domain_template',`
+  gen_require(`
+    attribute container_domain;
+    attribute container_net_domain;
+    attribute gravity_container_domain;
+  ')
+
+  type $1_t, container_domain, container_net_domain;
+  typeattribute $1_t gravity_container_domain;
+  domain_type($1_t)
+  domain_user_exemption_target($1_t)
+  mls_rangetrans_target($1_t)
+  #Allow processes running inside the runtime container to have visibility into docker containers
+  #mcs_constrained($1_t)
+  role system_r types $1_t;
+  kernel_read_all_proc($1_t)
 ')
