@@ -10,7 +10,7 @@ BUILDBOX_INSTANCE?=selinux-dev
 VERSION?=6.0.0
 BUILD_BUCKET_URL?=s3://clientbuilds.gravitational.io
 OUTPUT?=output
-CONTAINER_RUNTIME:=$(shell command -v podman 2> /dev/null || echo docker)
+CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
 COPY:=cp
 
 all: build $(OUTPUT)/gravity.statedir.fc.template

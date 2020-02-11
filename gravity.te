@@ -418,6 +418,9 @@ seutil_domtrans_loadpolicy(gravity_domain)
 # unfortunately `selinuxexeccon` is not labeled for the type of access it performs
 selinux_compute_create_context(gravity_installer_t)
 allow gravity_domain self:process setfscreate;
+# allow create/delete of /etc/modules-load.d/gravity.conf
+files_manage_etc_runtime_files(gravity_domain)
+files_etc_filetrans_etc_runtime(gravity_domain, file)
 
 #############################
 #
