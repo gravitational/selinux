@@ -5,6 +5,7 @@ TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
 SOURCES=gravity.te gravity.if gravity.fc
 CONTAINER_BUILD_ARGS?=
 CONTAINER_RUN_ARGS?=
+OUTPUT_GROUP?=$(id -g)
 CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
@@ -22,15 +23,18 @@ $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 
 $(OUTPUT)/gravity.pp: $(SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
-	mv $(@F) $@
+	#mv $(@F) $@
+	install -D -g $(OUTPUT_GROUP) $(@F) $@
 
 $(OUTPUT)/container.pp: $(CONTAINER_SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D -m 644 container-selinux/container.if ${DESTDIR}${SHAREDIR}/selinux/devel/include/services/container.if
-	mv $(@F) $@
+	#mv $(@F) $@
+	install -D -g $(OUTPUT_GROUP) $(@F) $@
 
 $(OUTPUT)/gravity.statedir.fc.template: $(OUTPUT)/gravity.pp
-	$(COPY) $(@F) $@
+	#$(COPY) $(@F) $@
+	install -D -g $(OUTPUT_GROUP) $(@F) $@
 
 gravity.fc: gravity.fc.template gravity.statedir.fc.template values.toml
 	tpl -values values.toml -template gravity.fc.template -template gravity.statedir.fc.template -output $@
