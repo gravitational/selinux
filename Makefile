@@ -4,8 +4,8 @@ AWSCLI?=aws
 TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
 SOURCES=gravity.te gravity.if gravity.fc
 CONTAINER_BUILD_ARGS?=
-CONTAINER_RUN_ARGS?=
 OUTPUT_GROUP?=$(shell id -g)
+OUTPUT_OWNER?=$(shell id -u)
 CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
@@ -15,7 +15,7 @@ OUTPUT?=output
 CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
 COPY:=cp
 
-all: build $(OUTPUT)/gravity.statedir.fc.template
+all: build
 
 $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 	@echo Compressing $^ -\> $@
@@ -23,18 +23,15 @@ $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 
 $(OUTPUT)/gravity.pp: $(SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
-	#mv $(@F) $@
-	install -D -g $(OUTPUT_GROUP) $(@F) $@
+	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
 
 $(OUTPUT)/container.pp: $(CONTAINER_SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D -m 644 container-selinux/container.if ${DESTDIR}${SHAREDIR}/selinux/devel/include/services/container.if
-	#mv $(@F) $@
-	install -D -g $(OUTPUT_GROUP) $(@F) $@
+	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
 
 $(OUTPUT)/gravity.statedir.fc.template: $(OUTPUT)/gravity.pp
-	#$(COPY) $(@F) $@
-	install -D -g $(OUTPUT_GROUP) $(@F) $@
+	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
 
 gravity.fc: gravity.fc.template gravity.statedir.fc.template values.toml
 	tpl -values values.toml -template gravity.fc.template -template gravity.statedir.fc.template -output $@
@@ -62,12 +59,14 @@ install: man
 
 .PHONY: build
 build: buildbox
-	${CONTAINER_RUNTIME} run ${CONTAINER_RUN_ARGS} \
+	${CONTAINER_RUNTIME} run \
 		--name=${BUILDBOX_INSTANCE} \
 		--privileged \
 		-v ${PWD}:/src \
+		--env "OUTPUT_GROUP=${OUTPUT_GROUP}" \
+		--env "OUTPUT_OWNER=${OUTPUT_OWNER}" \
 		--rm ${BUILDBOX} \
-		make ${TARGETS:=.pp.bz2}
+		make ${TARGETS:=.pp.bz2} $(OUTPUT)/gravity.statedir.fc.template
 
 .PHONY: buildbox
 buildbox:
