@@ -4,6 +4,7 @@ AWSCLI?=aws
 TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
 SOURCES=gravity.te gravity.if gravity.fc
 CONTAINER_BUILD_ARGS?=
+CONTAINER_RUN_ARGS?=
 CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
@@ -57,7 +58,7 @@ install: man
 
 .PHONY: build
 build: buildbox
-	${CONTAINER_RUNTIME} run \
+	${CONTAINER_RUNTIME} run ${CONTAINER_RUN_ARGS} \
 		--name=${BUILDBOX_INSTANCE} \
 		--privileged \
 		-v ${PWD}:/src \
