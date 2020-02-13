@@ -1,7 +1,8 @@
 MODULES?=${TARGETS:=.pp.bz2}
 SHAREDIR?=/usr/share
 AWSCLI?=aws
-TARGETS?=$(OUTPUT)/container $(OUTPUT)/gravity
+OUTPUT?=output
+TARGETS:=$(OUTPUT)/container $(OUTPUT)/gravity
 SOURCES=gravity.te gravity.if gravity.fc
 CONTAINER_BUILD_ARGS?=
 OUTPUT_GROUP?=$(shell id -g)
@@ -10,8 +11,6 @@ CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if con
 BUILDBOX?=selinux-dev:centos
 BUILDBOX_INSTANCE?=selinux-dev
 VERSION?=6.0.0
-BUILD_BUCKET_URL?=s3://clientbuilds.gravitational.io
-OUTPUT?=output
 CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
 COPY:=cp
 
