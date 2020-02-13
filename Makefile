@@ -20,25 +20,29 @@ all: build
 $(OUTPUT)/%.pp.bz2: $(OUTPUT)/%.pp | $(OUTPUT)
 	@echo Compressing $^ -\> $@
 	bzip2 -f -9 -c $^ > $@
+	chown $(OUTPUT_OWNER):$(OUTPUT_GROUP) $@
 
 $(OUTPUT)/gravity.pp: $(SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
+	make -f ${SHAREDIR}/selinux/devel/Makefile clean
 
 $(OUTPUT)/container.pp: $(CONTAINER_SOURCES) | $(OUTPUT)
 	make -f ${SHAREDIR}/selinux/devel/Makefile $(@F)
 	install -D -m 644 container-selinux/container.if ${DESTDIR}${SHAREDIR}/selinux/devel/include/services/container.if
 	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
+	make -f ${SHAREDIR}/selinux/devel/Makefile clean
 
 $(OUTPUT)/gravity.statedir.fc.template: $(OUTPUT)/gravity.pp
 	install -D --group $(OUTPUT_GROUP) --owner $(OUTPUT_OWNER) $(@F) $@
 
 gravity.fc: gravity.fc.template gravity.statedir.fc.template values.toml
 	tpl -values values.toml -template gravity.fc.template -template gravity.statedir.fc.template -output $@
+	chown $(OUTPUT_OWNER):$(OUTPUT_GROUP) $@
 
 .PHONY: clean
 clean:
-	rm -f *~ *.tc $(OUTPUT)/*.pp $(OUTPUT)/*.pp.bz2
+	rm -f *~ *.tc $(OUTPUT)/*.pp $(OUTPUT)/*.pp.bz2 $(OUTPUT)/gravity.statedir.fc.template
 	rm -f container-selinux/*~ container-selinux/*.tc
 	rm -rf tmp *.tar.gz
 
@@ -82,3 +86,4 @@ get-version:
 
 $(OUTPUT):
 	mkdir -p $@
+	chown $(OUTPUT_OWNER):$(OUTPUT_GROUP) $@
