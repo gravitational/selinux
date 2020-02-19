@@ -10,13 +10,29 @@ interface(`gravity_home_content_filetrans',`
   files_search_home($1)
 ')
 
+########################################
+## <summary>
+##	Transition the specified type/role to gravity role.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+## <param name="role">
+## <summary>
+## 	Role allowed access.
+## </summary>
+## </param>
+#
 interface(`gravity_roletrans_gravity',`
   gen_require(`
     role gravity_roles;
-    type gravity_t, gravity_exec_t;
+    type gravity_exec_t, gravity_installer_exec_t;
   ')
   allow $1 gravity_roles;
   role_transition $1 gravity_exec_t gravity_roles;
+  role_transition $1 gravity_installer_exec_t gravity_roles;
   gravity_domtrans($2)
 ')
 
@@ -43,6 +59,38 @@ interface(`gravity_run',`
 
   gravity_domtrans($1)
   roleattribute $2 gravity_roles;
+')
+
+########################################
+## <summary>
+##	Enable the specified type/role to use gravity.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+## <param name="role">
+## <summary>
+## 	Role allowed access.
+## </summary>
+## </param>
+#
+interface(`gravity_run_to',`
+  gen_require(`
+    role system_r;
+    attribute gravity_domain;
+    attribute gravity_container_domain;
+    type gravity_exec_t, gravity_installer_exec_t;
+  ')
+
+  can_exec($1, gravity_executable_domain)
+  gravity_domtrans($1)
+  gravity_installer_domtrans($1)
+  role $2 types gravity_domain;
+  role $2 types gravity_container_domain;
+  role_transition $2 gravity_exec_t system_r;
+  role_transition $2 gravity_installer_exec_t system_r;
 ')
 
 ########################################
@@ -128,6 +176,27 @@ interface(`gravity_installer_domtrans',`
   corecmd_search_bin($1)
   domtrans_pattern($1, gravity_installer_exec_t, gravity_installer_t)
 ')
+
+########################################
+## <summary>
+##	Execute kubernetes tools in the specified domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`gravity_kubernetes_domtrans',`
+  gen_require(`
+    type gravity_kubernetes_t, gravity_kubernetes_exec_t;
+  ')
+
+  corecmd_search_bin($1)
+  domtrans_pattern($1, gravity_kubernetes_exec_t, gravity_kubernetes_t)
+')
+
+
 
 ######################################
 ## <summary>
@@ -428,8 +497,7 @@ interface(`gravity_manage_executable_content',`
     attribute gravity_executable_domain;
   ')
 
-  # TODO
-  allow $1 gravity_executable_domain:file { setattr unlink };
+  manage_files_pattern($1, gravity_executable_domain, gravity_executable_domain)
 ')
 
 ########################################
