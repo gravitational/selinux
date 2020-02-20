@@ -12,6 +12,7 @@ gen_require(`
   type container_runtime_tmpfs_t;
   type spc_t;
   type var_t;
+  type etc_t;
   type var_lib_t;
   type var_log_t;
   type unlabeled_t;
@@ -62,12 +63,10 @@ attribute gravity_port_type;
 type gravity_port_t, gravity_port_type;
 type gravity_install_port_t, gravity_port_type;
 type gravity_vxlan_port_t, gravity_port_type;
-type gravity_docker_port_t, gravity_port_type;
 type gravity_kubernetes_port_t, gravity_port_type;
 corenet_port(gravity_port_t)
 corenet_port(gravity_install_port_t)
 corenet_port(gravity_vxlan_port_t)
-corenet_port(gravity_docker_port_t)
 corenet_port(gravity_kubernetes_port_t)
 
 #####################################
@@ -139,6 +138,7 @@ role gravity_roles types gravity_container_runtime_t;
 # Local policy
 #
 
+userdom_use_user_terminals(gravity_domain)
 can_exec(gravity_domain, gravity_exec_t)
 can_exec(gravity_domain, gravity_installer_exec_t)
 can_exec(gravity_domain, gravity_container_file_t)
@@ -366,33 +366,23 @@ logging_send_syslog_msg(gravity_installer_t)
 optional_policy(`
   gen_require(`
     role unconfined_r;
+    type unconfined_t;
   ')
-  unconfined_run_to(gravity_t, gravity_exec_t)
-  unconfined_run_to(gravity_installer_t, gravity_installer_exec_t)
-  role_transition unconfined_r gravity_exec_t system_r;
-  role_transition unconfined_r gravity_installer_exec_t system_r;
+  gravity_run_to(unconfined_t, unconfined_r)
 ')
-
 optional_policy(`
   gen_require(`
     role sysadm_r;
     type sysadm_t;
   ')
-  gravity_run(sysadm_t, sysadm_r)
-  gravity_installer_domtrans(sysadm_t)
-  role_transition sysadm_r gravity_exec_t system_r;
-  role_transition sysadm_r gravity_installer_exec_t system_r;
+  gravity_run_to(sysadm_t, sysadm_r)
 ')
-
 optional_policy(`
   gen_require(`
     role staff_r;
     type staff_t;
   ')
-  gravity_run(staff_t, staff_r)
-  gravity_installer_domtrans(staff_t)
-  role_transition staff_r gravity_exec_t system_r;
-  role_transition staff_r gravity_installer_exec_t system_r;
+  gravity_run_to(staff_t, staff_r)
 ')
 
 allow gravity_domain self:capability { sys_ptrace sys_admin sys_resource chown fowner fsetid setuid setgid setpcap sys_chroot };
@@ -430,6 +420,8 @@ files_dontaudit_write_root_dirs(gravity_domain)
 #
 # gravity installer
 #
+
+gravity_domtrans(gravity_installer_t)
 # switch the role to system_r when restarting
 domain_role_change_exemption(gravity_installer_t)
 domain_system_change_exemption(gravity_installer_t)
@@ -598,20 +590,21 @@ optional_policy(`
     type faillog_t;
     type lastlog_t;
     type wtmp_t;
-    type etc_t;
   ')
-  allow gravity_domain etc_t:lnk_file unlink;
   allow gravity_domain faillog_t:file unlink;
   allow gravity_domain lastlog_t:file unlink;
   allow gravity_domain wtmp_t:file unlink;
   allow gravity_container_t faillog_t:file { read_file_perms };
 ')
+allow gravity_domain etc_t:lnk_file unlink;
 # ls/lsof/cat support for the above
 auth_read_passwd(gravity_container_t)
 auth_read_shadow(gravity_container_t)
 auth_read_login_records(gravity_container_t)
 auth_read_lastlog(gravity_container_t)
 fs_getattr_xattr_fs(gravity_container_t)
+# allow rm to remove docker network directory
+allow gravity_container_t container_var_lib_t:file unlink;
 
 # systemd-tmpfiles
 # ================
