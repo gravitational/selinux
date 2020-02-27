@@ -548,6 +548,7 @@ template(`gravity_system_container_domain_template',`
     attribute container_net_domain;
     attribute gravity_container_domain;
     attribute gravity_executable_domain;
+    attribute gravity_domain;
   ')
 
   type $1_t, container_domain, container_net_domain;
@@ -559,6 +560,10 @@ template(`gravity_system_container_domain_template',`
   kernel_read_all_proc($1_t)
   auth_read_passwd($1_t)
   auth_read_shadow($1_t)
+
+  can_exec($1_t, $1_exec_t)
+  can_exec(gravity_domain, $1_exec_t)
+  domtrans_pattern(gravity_domain, $1_exec_t, $1_t)
 
   typeattribute $1_t gravity_container_domain;
 

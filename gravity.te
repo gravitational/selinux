@@ -16,6 +16,11 @@ gen_require(`
   type var_lib_t;
   type var_log_t;
   type unlabeled_t;
+  type faillog_t;
+  type lastlog_t;
+  type wtmp_t;
+  type user_fonts_t;
+  type sysfs_t;
 ')
 
 ####################################
@@ -90,6 +95,7 @@ ubac_constrained(gravity_home_t)
 
 type gravity_kubelet_home_t;
 files_type(gravity_kubelet_home_t)
+files_mountpoint(gravity_kubelet_home_t)
 
 # socket files
 type gravity_container_var_run_t;
@@ -97,19 +103,12 @@ files_pid_file(gravity_container_var_run_t)
 
 # init process
 gravity_system_container_domain_template(gravity_container_init)
-can_exec(gravity_container_init_t, gravity_container_init_exec_t)
-
 gravity_system_container_domain_template(gravity_container_systemctl)
-can_exec(gravity_container_systemctl_t, gravity_container_systemctl_exec_t)
-
 # kubernetes control plane components
 gravity_system_container_domain_template(gravity_kubernetes)
-can_exec(gravity_kubernetes_t, gravity_kubernetes_exec_t)
 can_exec(gravity_kubernetes_t container_runtime_exec_t)
-
 # cluster services
 gravity_system_container_domain_template(gravity_service)
-can_exec(gravity_service_t, gravity_service_exec_t)
 can_exec(gravity_service_t, gravity_container_file_t)
 
 # domain for all not otherwise labeled processes running inside the container
@@ -182,6 +181,7 @@ allow gravity_domain self:process { setrlimit setpgid ptrace setsched setkeycrea
 allow gravity_domain self:tcp_socket create_socket_perms;
 allow gravity_domain self:tcp_socket create_stream_socket_perms;
 allow gravity_domain self:unix_dgram_socket { connect create getattr setopt };
+allow gravity_domain self:file { manage_file_perms };
 
 allow gravity_domain gravity_container_init_exec_t:lnk_file { manage_lnk_file_perms };
 allow gravity_domain gravity_container_init_exec_t:file { manage_file_perms };
@@ -427,7 +427,6 @@ domain_role_change_exemption(gravity_installer_t)
 domain_system_change_exemption(gravity_installer_t)
 userdom_read_admin_home_files(gravity_installer_t)
 userdom_read_user_home_content_files(gravity_installer_t)
-seutil_dontaudit_read_file_contexts(gravity_installer_t)
 userdom_user_home_content_filetrans(gravity_installer_t, gravity_home_t, file, "crashreport.tgz")
 dbus_system_bus_client(gravity_domain)
 init_dbus_chat(gravity_domain)
@@ -490,6 +489,9 @@ kernel_rw_fs_sysctls(gravity_container_init_t)
 dev_read_kmsg(gravity_container_init_t)
 dev_write_kmsg(gravity_container_init_t)
 init_rw_stream_sockets(gravity_container_init_t)
+dev_write_sysfs_dirs(gravity_container_init_t)
+allow gravity_container_init_t sysfs_t:file write;
+udev_manage_pid_files(gravity_container_init_t)
 allow gravity_container_init_t sysctl_fs_t:file write;
 allow gravity_container_init_t gravity_container_home_t:dir { manage_dir_perms };
 allow gravity_container_init_t gravity_container_home_t:file { setattr ioctl rename lock unlink };
@@ -585,17 +587,12 @@ auth_manage_login_records(gravity_container_init_t)
 auth_manage_faillog(gravity_container_init_t)
 auth_create_lastlog(gravity_container_init_t)
 auth_rw_lastlog(gravity_container_init_t)
-optional_policy(`
-  gen_require(`
-    type faillog_t;
-    type lastlog_t;
-    type wtmp_t;
-  ')
-  allow gravity_domain faillog_t:file unlink;
-  allow gravity_domain lastlog_t:file unlink;
-  allow gravity_domain wtmp_t:file unlink;
-  allow gravity_container_t faillog_t:file { read_file_perms };
-')
+
+allow gravity_domain faillog_t:file unlink;
+allow gravity_domain lastlog_t:file unlink;
+allow gravity_domain wtmp_t:file unlink;
+allow gravity_container_t faillog_t:file { read_file_perms };
+
 allow gravity_domain etc_t:lnk_file unlink;
 # ls/lsof/cat support for the above
 auth_read_passwd(gravity_container_t)
@@ -605,11 +602,14 @@ auth_read_lastlog(gravity_container_t)
 fs_getattr_xattr_fs(gravity_container_t)
 # allow rm to remove docker network directory
 allow gravity_container_t container_var_lib_t:file unlink;
+allow gravity_container_t container_var_lib_t:dir rmdir;
 
 # systemd-tmpfiles
 # ================
 auth_dontaudit_read_login_records(gravity_container_init_t)
 auth_dontaudit_write_login_records(gravity_container_init_t)
+# .ICE-unix
+userdom_dontaudit_manage_user_tmp_dirs(gravity_container_init_t)
 # do not allow systemd inside the container to relabel
 dontaudit gravity_container_init_t gravity_container_file_t:dir { relabel_dir_perms };
 dontaudit gravity_container_init_t gravity_container_home_t:dir { relabel_dir_perms };
@@ -619,6 +619,17 @@ dontaudit gravity_container_init_t var_t:dir { create relabel_dir_perms };
 dontaudit gravity_container_init_t wtmp_t:file { relabel_file_perms };
 dontaudit gravity_container_init_t faillog_t:file { relabel_file_perms };
 dontaudit gravity_container_init_t lastlog_t:file { relabel_file_perms };
+# .font-unix
+dontaudit gravity_container_init_t user_fonts_t:dir create;
+# wtmp
+dontaudit gravity_container_init_t gravity_container_home_t:file { relabel_file_perms };
+# coredump
+optional_policy(`
+  gen_require(`
+    type init_var_lib_t;
+  ')
+  dontaudit gravity_container_init_t init_var_lib_t:dir { create };
+')
 allow container_runtime_t gravity_container_init_t:dbus send_msg;
 allow gravity_container_init_t container_runtime_t:dbus send_msg;
 # /etc/mtab inside planet
@@ -833,7 +844,12 @@ admin_pattern(gravity_kubernetes_t, gravity_kubelet_home_t)
 gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "plugins")
 gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "plugins_registry")
 gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "device-plugins")
-allow gravity_kubernetes_t gravity_kubelet_home_t:dir mounton;
+gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "pods")
+gravity_kubelet_home_content_filetrans(gravity_kubernetes_t, container_file_t, dir, "pod-resources")
+# allow kubelet to (re)mount pod volumes
+fs_mount_all_fs(gravity_kubernetes_t)
+fs_unmount_all_fs(gravity_kubernetes_t)
+fs_remount_all_fs(gravity_kubernetes_t)
 # relabel <root-dir>/{device-plugins,plugins,plugin_registry}
 allow gravity_kubernetes_t container_file_t:dir relabelto;
 # create /var/lib/kubelet/.*
@@ -943,9 +959,11 @@ allow gravity_domain var_log_t:dir { rmdir };
 domain_read_all_domains_state(gravity_domain)
 ps_process_pattern(gravity_domain, domain)
 seutil_read_default_contexts(gravity_domain)
+# /bin/ps auxZ --forest
+term_dontaudit_getattr_unallocated_ttys(gravity_domain)
 # df -i
 allow gravity_domain configfs_t:dir { list_dir_perms };
-# store bits from /etc
+# store bits from /etc/selinux
 allow gravity_domain selinux_config_t:dir { list_dir_perms };
 # system export-runtime-journal: mount /var/lib/gravity/local/packages/unpacked/gravitational.io/planet/<version>/rootfs/tmp/journal
 allow gravity_domain gravity_container_file_t:dir mounton;
