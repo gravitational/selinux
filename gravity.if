@@ -529,6 +529,7 @@ template(`gravity_domain_template',`
 
   auth_manage_passwd($1_t)
   auth_manage_shadow($1_t)
+  allow $1_t gravity_executable_domain:file { relabel_file_perms };
 ')
 
 ########################################
@@ -597,8 +598,6 @@ template(`gravity_container_domain_template',`
   domain_type($1_t)
   domain_user_exemption_target($1_t)
   mls_rangetrans_target($1_t)
-  #Allow processes running inside the runtime container to have visibility into docker containers
-  #mcs_constrained($1_t)
   role system_r types $1_t;
   kernel_read_all_proc($1_t)
 ')

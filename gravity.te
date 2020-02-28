@@ -806,6 +806,9 @@ kernel_unmount_proc(gravity_container_domain)
 fs_mount_tmpfs(gravity_container_domain)
 fs_unmount_tmpfs(gravity_container_domain)
 
+# allow vi to edit services
+allow gravity_container_t gravity_unit_file_t:file { manage_file_perms };
+
 # docker info
 allow gravity_container_t container_runtime_t:unix_stream_socket connectto;
 
