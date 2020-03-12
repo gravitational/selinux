@@ -64,6 +64,34 @@ interface(`gravity_run',`
 ########################################
 ## <summary>
 ##	Enable the specified type/role to use gravity.
+##  Does not allow the role automatic transition to gravity domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+## <param name="role">
+## <summary>
+## 	Role allowed access.
+## </summary>
+## </param>
+#
+interface(`gravity_exec_to',`
+  gen_require(`
+    role system_r;
+    attribute gravity_domain;
+    attribute gravity_container_domain;
+  ')
+
+  can_exec($1, gravity_executable_domain)
+  role $2 types gravity_domain;
+  role $2 types gravity_container_domain;
+')
+
+########################################
+## <summary>
+##	Enable the specified type/role to use gravity.
 ## </summary>
 ## <param name="domain">
 ## <summary>
@@ -78,10 +106,8 @@ interface(`gravity_run',`
 #
 interface(`gravity_run_to',`
   gen_require(`
-    role system_r;
     attribute gravity_domain;
     attribute gravity_container_domain;
-    type gravity_exec_t, gravity_installer_exec_t;
   ')
 
   can_exec($1, gravity_executable_domain)
@@ -89,38 +115,6 @@ interface(`gravity_run_to',`
   gravity_installer_domtrans($1)
   role $2 types gravity_domain;
   role $2 types gravity_container_domain;
-')
-
-########################################
-## <summary>
-##	Enable the specified unprivileged type/role to use gravity.
-## </summary>
-## <param name="domain">
-## <summary>
-##	Domain allowed to transition.
-## </summary>
-## </param>
-## <param name="role">
-## <summary>
-## 	Role allowed access.
-## </summary>
-## </param>
-#
-interface(`gravity_run_to_unpriv',`
-  gen_require(`
-    attribute gravity_domain;
-    attribute gravity_container_domain;
-    type gravity_exec_t, gravity_installer_exec_t;
-  ')
-
-  can_exec($1, gravity_executable_domain)
-  gravity_domtrans($1)
-  gravity_installer_domtrans($1)
-  gravity_read_state_files($1)
-  role $2 types gravity_domain;
-  role $2 types gravity_container_domain;
-  role_transition $2 gravity_exec_t $2;
-  role_transition $2 gravity_installer_exec_t $2;
 ')
 
 ########################################

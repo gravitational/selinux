@@ -355,7 +355,14 @@ kernel_read_messages(gravity_installer_t)
 logging_send_syslog_msg(gravity_t)
 logging_send_syslog_msg(gravity_installer_t)
 
-# allow staff/sysadm domains to use gravity
+# allow unconfined/staff/sysadm domains to use gravity
+optional_policy(`
+  gen_require(`
+    role unconfined_r;
+    type unconfined_t;
+  ')
+  gravity_exec_to(unconfined_t, unconfined_r)
+')
 optional_policy(`
   gen_require(`
     role sysadm_r;
@@ -363,13 +370,12 @@ optional_policy(`
   ')
   gravity_run_to(sysadm_t, sysadm_r)
 ')
-
 optional_policy(`
   gen_require(`
     role staff_r;
     type staff_t;
   ')
-  gravity_run_to_unpriv(staff_t, staff_r)
+  gravity_run_to(staff_t, staff_r)
 ')
 
 allow gravity_domain self:capability { sys_ptrace sys_admin sys_resource chown fowner fsetid setuid setgid setpcap sys_chroot };
