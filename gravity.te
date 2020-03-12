@@ -79,16 +79,7 @@ corenet_port(gravity_kubernetes_port_t)
 # Planet
 #
 
-container_runtime_domain_template(gravity_container_runtime)
-type gravity_container_runtime_exec_t, gravity_executable_domain;
-init_daemon_domain(gravity_container_runtime_t, gravity_container_runtime_exec_t)
-can_exec(gravity_container_runtime_t, gravity_container_runtime_exec_t)
-can_exec(gravity_container_runtime_t, gravity_container_file_t)
-can_exec(gravity_container_runtime_t, gravity_service_exec_t)
-can_exec(gravity_container_runtime_t, gravity_container_init_exec_t)
-can_exec(gravity_container_runtime_t, gravity_kubernetes_exec_t)
-role gravity_container_roles types gravity_container_runtime_t;
-
+gravity_container_runtime_domain_template(gravity_container_runtime)
 type gravity_container_home_t;
 files_type(gravity_container_home_t)
 ubac_constrained(gravity_home_t)

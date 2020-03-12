@@ -552,12 +552,39 @@ template(`gravity_domain_template',`
 
   type $1_t, gravity_domain;
   type $1_exec_t, gravity_executable_domain;
+  role system_r types $1_t;
   application_domain($1_t, $1_exec_t)
   init_daemon_domain($1_t, $1_exec_t)
 
   auth_manage_passwd($1_t)
   auth_manage_shadow($1_t)
   allow $1_t gravity_executable_domain:file { relabel_file_perms };
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	gravity container runtime domain.
+##  Usually there will be only a single domain
+##  for the planet binary.
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+template(`gravity_container_runtime_domain_template',`
+  gen_require(`
+    attribute gravity_executable_domain;
+    attribute gravity_container_domain;
+  ')
+
+  container_runtime_domain_template($1)
+  typeattribute $1_t gravity_container_domain;
+  type $1_exec_t, gravity_executable_domain;
+  init_daemon_domain($1_t, $1_exec_t)
+  can_exec($1_t, gravity_executable_domain)
+  role gravity_container_roles types $1_t;
 ')
 
 ########################################
