@@ -64,6 +64,34 @@ interface(`gravity_run',`
 ########################################
 ## <summary>
 ##	Enable the specified type/role to use gravity.
+##  Does not allow the role automatic transition to gravity domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+## <param name="role">
+## <summary>
+## 	Role allowed access.
+## </summary>
+## </param>
+#
+interface(`gravity_exec_to',`
+  gen_require(`
+    role system_r;
+    attribute gravity_domain;
+    attribute gravity_container_domain;
+  ')
+
+  can_exec($1, gravity_executable_domain)
+  role $2 types gravity_domain;
+  role $2 types gravity_container_domain;
+')
+
+########################################
+## <summary>
+##	Enable the specified type/role to use gravity.
 ## </summary>
 ## <param name="domain">
 ## <summary>
@@ -78,10 +106,8 @@ interface(`gravity_run',`
 #
 interface(`gravity_run_to',`
   gen_require(`
-    role system_r;
     attribute gravity_domain;
     attribute gravity_container_domain;
-    type gravity_exec_t, gravity_installer_exec_t;
   ')
 
   can_exec($1, gravity_executable_domain)
@@ -89,8 +115,6 @@ interface(`gravity_run_to',`
   gravity_installer_domtrans($1)
   role $2 types gravity_domain;
   role $2 types gravity_container_domain;
-  role_transition $2 gravity_exec_t system_r;
-  role_transition $2 gravity_installer_exec_t system_r;
 ')
 
 ########################################
@@ -195,8 +219,6 @@ interface(`gravity_kubernetes_domtrans',`
   corecmd_search_bin($1)
   domtrans_pattern($1, gravity_kubernetes_exec_t, gravity_kubernetes_t)
 ')
-
-
 
 ######################################
 ## <summary>
@@ -524,11 +546,39 @@ template(`gravity_domain_template',`
 
   type $1_t, gravity_domain;
   type $1_exec_t, gravity_executable_domain;
+  role system_r types $1_t;
   application_domain($1_t, $1_exec_t)
   init_daemon_domain($1_t, $1_exec_t)
 
   auth_manage_passwd($1_t)
   auth_manage_shadow($1_t)
+  allow $1_t gravity_executable_domain:file { relabel_file_perms };
+')
+
+########################################
+## <summary>
+##	Creates types and rules for a
+##	gravity container runtime domain.
+##  Usually there will be only a single domain
+##  for the planet binary.
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+template(`gravity_container_runtime_domain_template',`
+  gen_require(`
+    attribute gravity_executable_domain;
+    attribute gravity_container_domain;
+  ')
+
+  container_runtime_domain_template($1)
+  typeattribute $1_t gravity_container_domain;
+  type $1_exec_t, gravity_executable_domain;
+  init_daemon_domain($1_t, $1_exec_t)
+  can_exec($1_t, gravity_executable_domain)
+  role gravity_container_roles types $1_t;
 ')
 
 ########################################
@@ -548,6 +598,7 @@ template(`gravity_system_container_domain_template',`
     attribute container_net_domain;
     attribute gravity_container_domain;
     attribute gravity_executable_domain;
+    attribute gravity_domain;
   ')
 
   type $1_t, container_domain, container_net_domain;
@@ -559,6 +610,10 @@ template(`gravity_system_container_domain_template',`
   kernel_read_all_proc($1_t)
   auth_read_passwd($1_t)
   auth_read_shadow($1_t)
+
+  can_exec($1_t, $1_exec_t)
+  can_exec(gravity_domain, $1_exec_t)
+  domtrans_pattern(gravity_domain, $1_exec_t, $1_t)
 
   typeattribute $1_t gravity_container_domain;
 
@@ -592,8 +647,6 @@ template(`gravity_container_domain_template',`
   domain_type($1_t)
   domain_user_exemption_target($1_t)
   mls_rangetrans_target($1_t)
-  #Allow processes running inside the runtime container to have visibility into docker containers
-  #mcs_constrained($1_t)
   role system_r types $1_t;
   kernel_read_all_proc($1_t)
 ')
