@@ -717,7 +717,7 @@ allow gravity_container_runtime_t self:process getattr;
 allow gravity_container_runtime_t self:tcp_socket { connect create setopt getopt getattr };
 # TODO: label kubernetes services with a custom type
 # init_t -> /lib/systemd/system/kube-controller-manager.service
-allow gravity_container_runtime_t gravity_container_file_t:service { start status };
+allow gravity_container_runtime_t gravity_container_file_t:service { manage_service_perms };
 allow gravity_container_runtime_t gravity_container_init_t:dbus send_msg;
 allow gravity_container_runtime_t gravity_container_init_t:system status;
 
@@ -771,6 +771,13 @@ manage_files_pattern(gravity_container_domain, gravity_container_file_t, gravity
 manage_lnk_files_pattern(gravity_container_domain, gravity_container_file_t, gravity_container_file_t)
 manage_sock_files_pattern(gravity_container_domain, gravity_container_file_t, gravity_container_file_t)
 manage_fifo_files_pattern(gravity_container_domain, gravity_container_file_t, gravity_container_file_t)
+# grep, find, mv
+rw_dirs_pattern(gravity_container_domain,  gravity_container_home_t, gravity_container_home_t)
+rw_files_pattern(gravity_container_domain, gravity_container_home_t, gravity_container_home_t)
+rw_lnk_files_pattern(gravity_container_domain, gravity_container_home_t, gravity_container_home_t)
+rw_sock_files_pattern(gravity_container_domain, gravity_container_home_t, gravity_container_home_t)
+rw_fifo_files_pattern(gravity_container_domain, gravity_container_home_t, gravity_container_home_t)
+
 can_exec(gravity_container_domain, gravity_container_file_t)
 allow gravity_container_domain gravity_container_file_t:blk_file setattr;
 rw_blk_files_pattern(gravity_container_domain, gravity_container_file_t, gravity_container_file_t)
@@ -811,7 +818,6 @@ allow gravity_container_t container_runtime_t:unix_stream_socket connectto;
 domain_read_all_domains_state(gravity_container_domain)
 allow gravity_container_domain domain:process getattr;
 # grep, find
-allow gravity_container_domain gravity_container_home_t:lnk_file read;
 allow gravity_container_domain container_log_t:file { getattr open read };
 container_runtime_read_tmpfs_files(gravity_container_domain)
 # strace
