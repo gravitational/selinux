@@ -31,9 +31,8 @@ gen_require(`
 attribute_role gravity_roles;
 attribute_role gravity_container_roles;
 
-# attribute to share between gravity domains (cluster vs installer)
+# attribute to share between gravity domains (cluster operation and installer)
 attribute gravity_domain;
-role gravity_roles types gravity_domain;
 # attribute for processes runing inside the planet container
 attribute gravity_container_domain;
 # attribute for all gravity binaries
@@ -121,7 +120,7 @@ files_mountpoint(gravity_container_file_t)
 files_associate_rootfs(gravity_container_file_t)
 domain_entry_file(gravity_container_t, gravity_container_file_t)
 
-role gravity_roles types gravity_container_runtime_t;
+role gravity_roles types { gravity_container_domain gravity_domain };
 
 ####################################
 #
@@ -446,6 +445,9 @@ allow gravity_domain systemd_unit_file_t:service { disable enable status stop };
 allow gravity_domain systemd_unit_file_t:file { unlink rw_file_perms };
 # do not audit the attempt to create /writeable
 dontaudit gravity_installer_t root_t:dir { write };
+# allow to reset the state of the failed package service which might not have a unit file
+# existing - hence init_t
+allow gravity_installer_t init_t:service { manage_service_perms };
 
 # lsblk
 fs_getattr_tmpfs(gravity_domain)
