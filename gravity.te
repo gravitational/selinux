@@ -353,6 +353,10 @@ kernel_read_messages(gravity_installer_t)
 # log to syslog
 logging_send_syslog_msg(gravity_t)
 logging_send_syslog_msg(gravity_installer_t)
+# add audit rules and query audit log
+logging_read_audit_log(gravity_domain)
+logging_read_audit_config(gravity_domain)
+logging_domtrans_auditctl(gravity_domain)
 
 # allow unconfined/staff/sysadm domains to use gravity
 optional_policy(`
