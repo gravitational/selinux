@@ -453,6 +453,33 @@ dontaudit gravity_installer_t root_t:dir { write };
 # existing - hence init_t
 allow gravity_installer_t init_t:service { manage_service_perms };
 
+gen_tunable(gravity_installer_manage_generic_base_dirs, false)
+gen_tunable(gravity_installer_manage_base_dirs, true)
+# TODO(dmitri): this is too open even if limited to the installer domain.
+# Figure out a way to do away with it or use gravity-specific base type?
+# allow installer to create directories in generic locations
+# and relabel files/directories as per volume configuration in the application manifest
+tunable_policy(`gravity_installer_manage_base_dirs',`
+  gen_require(`
+    type var_t, var_lib_t, usr_t, root_t;
+  ')
+  allow gravity_installer_t var_t:dir { create_dir_perms relabel_dir_perms setattr };
+  allow gravity_installer_t var_lib_t:dir { create_dir_perms relabel_dir_perms setattr };
+  allow gravity_installer_t usr_t:dir { create_dir_perms relabel_dir_perms setattr };
+  allow gravity_installer_t root_t:dir { create_dir_perms relabel_dir_perms setattr };
+  allow gravity_installer_t var_t:file { relabel_file_perms setattr };
+  allow gravity_installer_t var_lib_t:file { relabel_file_perms setattr };
+  allow gravity_installer_t usr_t:file { relabel_file_perms setattr };
+  allow gravity_installer_t root_t:file { relabel_file_perms setattr };
+')
+tunable_policy(`gravity_installer_manage_generic_base_dirs',`
+  gen_require(`
+    attribute base_file_type;
+  ')
+  allow gravity_installer_t base_file_type:dir { create_dir_perms relabel_dir_perms setattr };
+  allow gravity_installer_t base_file_type:file { relabel_file_perms setattr };
+')
+
 # lsblk
 fs_getattr_tmpfs(gravity_domain)
 udev_read_pid_files(gravity_domain)
