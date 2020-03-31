@@ -96,7 +96,7 @@ gravity_system_container_domain_template(gravity_container_init)
 gravity_system_container_domain_template(gravity_container_systemctl)
 # kubernetes control plane components
 gravity_system_container_domain_template(gravity_kubernetes)
-can_exec(gravity_kubernetes_t container_runtime_exec_t)
+can_exec(gravity_kubernetes_t, container_runtime_exec_t)
 # cluster services
 gravity_system_container_domain_template(gravity_service)
 can_exec(gravity_service_t, gravity_container_file_t)
@@ -163,12 +163,13 @@ container_runtime_domtrans(gravity_domain)
 
 # planet init
 # while planet is starting and has not been yet labeled
-dontaudit gravity_domain gravity_container_domain:key { create view setattr };
+dontaudit gravity_domain gravity_container_domain:key { create setattr view };
 dontaudit gravity_domain gravity_container_file_t:filesystem relabelto;
 dontaudit gravity_domain unlabeled_t:key create;
 dontaudit gravity_domain gravity_container_runtime_t:process { setsched sigkill };
 allow gravity_domain self:fifo_file rw_fifo_file_perms;
-allow gravity_domain self:process { setrlimit setpgid ptrace setsched setkeycreate setexec transition };
+allow gravity_domain self:process { ptrace setexec setkeycreate setpgid setsched transition };
+dontaudit gravity_domain self:process { setrlimit };
 allow gravity_domain self:tcp_socket create_socket_perms;
 allow gravity_domain self:tcp_socket create_stream_socket_perms;
 allow gravity_domain self:unix_dgram_socket { connect create getattr setopt };
@@ -327,7 +328,7 @@ dmesg_domtrans(gravity_domain)
 gravity_container_runtime_domtrans(gravity_domain)
 # cannot use a named transition as the binary is created by
 # first creating a file with a random name and then renaming it to gravity
-allow gravity_domain gravity_exec_t:file { create write rename };
+allow gravity_domain gravity_exec_t:file { create rename write };
 corecmd_bin_filetrans(gravity_domain, gravity_exec_t, file)
 corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "kubectl")
 corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "helm")
@@ -343,7 +344,7 @@ files_manage_etc_files(gravity_domain)
 files_load_kernel_modules(gravity_domain)
 files_search_kernel_modules(gravity_domain)
 files_read_kernel_modules(gravity_domain)
-allow gravity_domain self:rawip_socket { getopt setopt create };
+allow gravity_domain self:rawip_socket { create getopt setopt };
 kernel_read_state(gravity_domain)
 kernel_read_network_state(gravity_domain)
 kernel_read_all_sysctls(gravity_domain)
@@ -381,7 +382,7 @@ optional_policy(`
   gravity_run_to(staff_t, staff_r)
 ')
 
-allow gravity_domain self:capability { sys_ptrace sys_admin sys_resource chown fowner fsetid setuid setgid setpcap sys_chroot };
+allow gravity_domain self:capability { sys_admin sys_ptrace chown fowner fsetid sys_resource setuid setgid setpcap sys_chroot };
 # TODO: remove dac_override
 # This needs substantially more work
 allow gravity_domain self:capability { dac_override dac_read_search };
@@ -439,14 +440,14 @@ allow gravity_installer_t gravity_home_t:service { manage_service_perms };
 allow gravity_installer_t bin_t:lnk_file unlink;
 dontaudit gravity_installer_t self:capability net_admin;
 dontaudit gravity_domain gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
-allow gravity_domain self:netlink_kobject_uevent_socket { getattr create bind setopt };
+allow gravity_domain self:netlink_kobject_uevent_socket { create bind setopt getattr };
 # allow installer to reset/recreate agent service in /etc/systemd/system if
 # there's a unit that had not been correctly labeled (as gravity_unit_file_t).
 # The reason we're opening them for the whole gravity domain is that there are
 # still places (like agent deployment) that might get tripped by existing service unit
 # files without the expected label
 allow gravity_domain systemd_unit_file_t:service { disable enable status stop };
-allow gravity_domain systemd_unit_file_t:file { unlink rw_file_perms };
+allow gravity_domain systemd_unit_file_t:file { rw_file_perms unlink };
 # do not audit the attempt to create /writeable
 dontaudit gravity_installer_t root_t:dir { write };
 # allow to reset the state of the failed package service which might not have a unit file
@@ -494,7 +495,7 @@ auth_dontaudit_getattr_shadow(gravity_domain)
 
 allow gravity_domain container_share_t:dir mounton;
 allow gravity_domain container_file_t:dir mounton;
-allow gravity_domain container_file_t:filesystem { relabelto relabelfrom };
+allow gravity_domain container_file_t:filesystem { relabelfrom relabelto };
 allow gravity_domain container_runtime_exec_t:file { setattr unlink };
 optional_policy(`
   init_enable_transient_unit(gravity_domain)
@@ -521,7 +522,7 @@ allow gravity_container_init_t sysfs_t:file write;
 udev_manage_pid_files(gravity_container_init_t)
 allow gravity_container_init_t sysctl_fs_t:file write;
 allow gravity_container_init_t gravity_container_home_t:dir { manage_dir_perms };
-allow gravity_container_init_t gravity_container_home_t:file { setattr ioctl rename lock unlink };
+allow gravity_container_init_t gravity_container_home_t:file { ioctl rename lock setattr unlink };
 allow gravity_container_init_t gravity_container_runtime_t:process { signal_perms };
 allow gravity_container_init_t gravity_executable_domain:file entrypoint;
 
@@ -541,7 +542,7 @@ seutil_read_file_contexts(gravity_container_init_t)
 seutil_read_default_contexts(gravity_container_init_t)
 selinux_compute_access_vector(gravity_container_init_t)
 selinux_compute_create_context(gravity_container_init_t)
-allow gravity_container_init_t container_runtime_t:unix_stream_socket { create setopt bind listen };
+allow gravity_container_init_t container_runtime_t:unix_stream_socket { create bind setopt listen };
 allow gravity_container_init_t gravity_container_runtime_t:dbus send_msg;
 
 # shutdown container
@@ -553,9 +554,9 @@ kernel_request_load_module(gravity_container_init_t)
 # mknod /run/systemd/inaccessible/{fifo,sock}
 allow gravity_container_init_t self:netlink_route_socket nlmsg_write;
 allow gravity_container_init_t self:netlink_audit_socket nlmsg_relay;
-allow gravity_container_init_t container_file_t:fifo_file { getattr open create read write };
-allow gravity_container_init_t container_file_t:sock_file { setattr create write unlink };
-allow gravity_container_init_t container_share_t:dir { write add_name };
+allow gravity_container_init_t container_file_t:fifo_file { getattr create open read write };
+allow gravity_container_init_t container_file_t:sock_file { create write setattr unlink };
+allow gravity_container_init_t container_share_t:dir { add_name write };
 allow gravity_container_init_t container_share_t:file write;
 
 dev_mounton_sysfs(gravity_container_init_t)
@@ -594,7 +595,7 @@ kernel_unmount_proc(gravity_container_init_t)
 fs_unmount_tmpfs(gravity_container_init_t)
 
 # dbus-daemon
-allow gravity_container_init_t self:unix_stream_socket { getopt ioctl accept };
+allow gravity_container_init_t self:unix_stream_socket { getopt accept ioctl };
 allow gravity_container_init_t self:unix_dgram_socket { getopt setopt };
 
 kernel_manage_debugfs(gravity_container_init_t)
@@ -672,7 +673,7 @@ allow gravity_container_systemctl_t gravity_kubernetes_t:dir { search_dir_perms 
 allow gravity_container_systemctl_t gravity_service_t:dir { search_dir_perms };
 allow gravity_container_systemctl_t gravity_container_init_t:unix_stream_socket connectto;
 gravity_container_read_files(gravity_container_systemctl_t)
-allow gravity_container_systemctl_t gravity_container_init_t:system { status reload disable enable kill halt };
+allow gravity_container_systemctl_t gravity_container_init_t:system { reload status disable enable kill halt };
 allow gravity_container_systemctl_t gravity_container_file_t:service { manage_service_perms };
 allow gravity_container_systemctl_t gravity_container_domain:process { signal_perms };
 allow gravity_container_systemctl_t gravity_container_init_t:dbus send_msg;
