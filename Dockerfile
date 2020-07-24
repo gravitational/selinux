@@ -9,7 +9,8 @@ FROM registry.centos.org/centos/centos:7
 RUN set -x && yum -y install \
 	selinux-policy-devel \
 	bzip2 \
-	make
+	make \
+	git
 
 COPY --from=0 /go/bin/tpl /usr/local/bin/
 
