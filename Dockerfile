@@ -1,4 +1,4 @@
-FROM golang:1.12.9-buster
+FROM golang:1.13.14-buster
 
 RUN set -x && \
 	go get -u github.com/gravitational/tpl && \
@@ -7,6 +7,7 @@ RUN set -x && \
 FROM registry.centos.org/centos/centos:7
 
 RUN set -x && yum -y install \
+	selinux-policy-targeted \
 	selinux-policy-devel \
 	bzip2 \
 	make

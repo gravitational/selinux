@@ -8,9 +8,10 @@ CONTAINER_BUILD_ARGS?=
 OUTPUT_GROUP?=$(shell id -g)
 OUTPUT_OWNER?=$(shell id -u)
 CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
-BUILDBOX?=selinux-dev:centos
+BUILDBOX?=selinux-dev:centos7
 BUILDBOX_INSTANCE?=selinux-dev
 VERSION?=6.0.0
+DOCKERFILE:=Dockerfile
 CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
 COPY:=cp
 
@@ -73,7 +74,7 @@ build: buildbox
 
 .PHONY: buildbox
 buildbox:
-	${CONTAINER_RUNTIME} build -t ${BUILDBOX} ${CONTAINER_BUILD_ARGS} -f Dockerfile .
+	${CONTAINER_RUNTIME} build -t ${BUILDBOX} ${CONTAINER_BUILD_ARGS} -f $(DOCKERFILE) .
 
 .PHONY: publish
 publish: build

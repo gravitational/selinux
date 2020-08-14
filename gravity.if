@@ -28,12 +28,12 @@ interface(`gravity_home_content_filetrans',`
 interface(`gravity_roletrans_gravity',`
   gen_require(`
     role gravity_roles;
-    type gravity_exec_t, gravity_installer_exec_t;
+    attribute gravity_domain;
   ')
-  allow $1 gravity_roles;
-  role_transition $1 gravity_exec_t gravity_roles;
-  role_transition $1 gravity_installer_exec_t gravity_roles;
-  gravity_domtrans($2)
+  allow $2 gravity_roles;
+  role_transition $2 gravity_domain gravity_roles;
+  gravity_domtrans($1)
+  gravity_installer_domtrans($1)
 ')
 
 ########################################
