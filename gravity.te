@@ -1,4 +1,4 @@
-policy_module(gravity, 6.0.1)
+policy_module(gravity, 6.0.2)
 
 gen_require(`
   attribute container_domain;
@@ -236,8 +236,6 @@ userdom_admin_home_dir_filetrans(gravity_domain, gravity_exec_t, file, "gravity"
 userdom_admin_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-system.log")
 userdom_admin_home_dir_filetrans(gravity_domain, gravity_log_t, file, "gravity-install.log")
 
-gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-installer.service")
-gravity_home_content_filetrans(gravity_domain, gravity_unit_file_t, file, "gravity-agent.service")
 gravity_home_content_filetrans(gravity_domain, gravity_var_run_t, sock_file, "installer.sock")
 
 files_var_lib_filetrans(gravity_domain, gravity_home_t, dir, "gravity")
@@ -283,8 +281,6 @@ dontaudit gravity_domain gravity_container_runtime_t:process2 nosuid_transition;
 systemd_exec_systemctl(gravity_domain)
 dontaudit gravity_installer_t self:capability net_admin;
 systemd_create_unit_file_lnk(gravity_domain)
-init_reload_services(gravity_domain)
-init_status(gravity_domain)
 systemd_read_unit_files(gravity_domain)
 systemd_search_unit_dirs(gravity_domain)
 systemd_getattr_unit_dirs(gravity_domain)
@@ -319,7 +315,7 @@ allow gravity_domain gravity_port_t:tcp_socket { listen name_bind };
 sysnet_domtrans_ifconfig(gravity_domain)
 iptables_domtrans(gravity_domain)
 optional_policy(`
-  modutils_domtrans_insmod(gravity_domain)
+  modutils_domtrans_kmod(gravity_domain)
 ')
 usermanage_domtrans_groupadd(gravity_domain)
 usermanage_domtrans_useradd(gravity_domain)
@@ -427,10 +423,20 @@ domain_system_change_exemption(gravity_installer_t)
 userdom_read_admin_home_files(gravity_installer_t)
 userdom_read_user_home_content_files(gravity_installer_t)
 userdom_user_home_content_filetrans(gravity_installer_t, gravity_home_t, file, "crashreport.tgz")
+userdom_mmap_user_home_content_files(gravity_installer_t)
+modutils_read_module_deps_files(gravity_installer_t)
+
 dbus_system_bus_client(gravity_domain)
 init_dbus_chat(gravity_domain)
 init_start_transient_unit(gravity_domain)
 init_stop_transient_unit(gravity_domain)
+init_reload_services(gravity_domain)
+init_status(gravity_domain)
+optional_policy(`
+  init_start(gravity_domain)
+  init_stop(gravity_domain)
+')
+
 # start/stop planet scope unit
 systemd_start_systemd_services(gravity_domain)
 fs_rw_tmpfs_files(gravity_domain)
@@ -676,7 +682,7 @@ allow gravity_container_systemctl_t gravity_kubernetes_t:dir { search_dir_perms 
 allow gravity_container_systemctl_t gravity_service_t:dir { search_dir_perms };
 allow gravity_container_systemctl_t gravity_container_init_t:unix_stream_socket connectto;
 gravity_container_read_files(gravity_container_systemctl_t)
-allow gravity_container_systemctl_t gravity_container_init_t:system { reload status disable enable kill halt };
+allow gravity_container_systemctl_t gravity_container_init_t:system { reload status disable enable halt };
 allow gravity_container_systemctl_t gravity_container_file_t:service { manage_service_perms };
 allow gravity_container_systemctl_t gravity_container_domain:process { signal_perms };
 allow gravity_container_systemctl_t gravity_container_init_t:dbus send_msg;
@@ -876,6 +882,8 @@ allow gravity_kubernetes_t gravity_unit_file_t:service { manage_service_perms };
 allow gravity_kubernetes_t gravity_container_init_t:dbus send_msg;
 # gravity_container_read_home(gravity_kubernetes_t)
 allow gravity_kubernetes_t gravity_container_home_t:dir { getattr search open read remove_name write };
+# kubectl
+corecmd_exec_shell(gravity_kubernetes_t)
 
 # kubelet
 #==================================
