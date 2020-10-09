@@ -108,6 +108,8 @@ typeattribute gravity_container_t gravity_container_domain;
 # domain for system container purposes (i.e. application init container)
 gravity_container_domain_template(gravity_container_system)
 can_exec(gravity_container_system_t, gravity_exec_t)
+# allow init containers access to mounted gravity home
+gravity_home_mmap_files(gravity_container_system_t)
 
 # domain for gravity logging component
 gravity_container_domain_template(gravity_container_logger)
@@ -326,7 +328,9 @@ gravity_container_runtime_domtrans(gravity_domain)
 # cannot use a named transition as the binary is created by
 # first creating a file with a random name and then renaming it to gravity
 allow gravity_domain gravity_exec_t:file { create rename write };
-corecmd_bin_filetrans(gravity_domain, gravity_exec_t, file)
+# lnk_file to support temporary files when using `ln` to create the symlinks
+# for kubectl
+corecmd_bin_filetrans(gravity_domain, gravity_exec_t, { file lnk_file })
 corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "kubectl")
 corecmd_bin_filetrans(gravity_domain, gravity_kubernetes_exec_t, lnk_file, "helm")
 
@@ -536,6 +540,8 @@ allow gravity_container_init_t gravity_executable_domain:file entrypoint;
 allow gravity_container_init_t self:system status;
 allow gravity_container_init_t self:process { setfscreate setsockcreate };
 allow gravity_container_init_t self:dbus send_msg;
+# systemd uses bpf on centOS/rhel 8
+allow gravity_container_init_t self:bpf { map_create prog_load };
 optional_policy(`
   gen_require(`
     class dbus {acquire_svc};
@@ -624,6 +630,8 @@ auth_manage_login_records(gravity_container_init_t)
 auth_manage_faillog(gravity_container_init_t)
 auth_create_lastlog(gravity_container_init_t)
 auth_rw_lastlog(gravity_container_init_t)
+auth_read_passwd(gravity_container_init_t)
+modutils_read_module_deps_files(gravity_container_init_t)
 
 allow gravity_domain faillog_t:file unlink;
 allow gravity_domain lastlog_t:file unlink;
@@ -720,6 +728,10 @@ dbus_system_bus_client(gravity_container_runtime_t)
 filetrans_pattern(gravity_container_runtime_t, gravity_container_file_t, gravity_service_exec_t, lnk_file, "etcdctl-cmd")
 files_pid_filetrans(gravity_container_runtime_t, container_var_run_t, dir, "planet")
 files_pid_filetrans(gravity_container_runtime_t, container_var_run_t, sock_file, "planet.socket")
+optional_policy(`
+  init_start(gravity_container_runtime_t)
+  init_stop(gravity_container_runtime_t)
+')
 # udev monitor
 udev_create_kobject_uevent_socket(gravity_container_runtime_t)
 # start/stop planet scope units
@@ -762,7 +774,8 @@ allow gravity_container_runtime_t self:tcp_socket { connect create setopt getopt
 # init_t -> /lib/systemd/system/kube-controller-manager.service
 allow gravity_container_runtime_t gravity_container_file_t:service { manage_service_perms };
 allow gravity_container_runtime_t gravity_container_init_t:dbus send_msg;
-allow gravity_container_runtime_t gravity_container_init_t:system status;
+allow gravity_container_runtime_t gravity_container_init_t:system { start stop status };
+dontaudit gravity_container_runtime_t gravity_container_init_t:process setsched;
 
 ##################
 # gravity services
@@ -781,8 +794,10 @@ search_dirs_pattern(gravity_service_t, gravity_container_file_t, gravity_contain
 rw_files_pattern(gravity_service_t, gravity_container_file_t, gravity_container_file_t)
 rw_lnk_files_pattern(gravity_service_t, gravity_container_file_t, gravity_container_file_t)
 kernel_request_load_module(gravity_service_t)
-allow gravity_service_t gravity_service_exec_t:lnk_file { read_lnk_file_perms };
+# /bin/kmod inside planet
+modutils_read_module_deps_files(gravity_service_t)
 
+allow gravity_service_t gravity_service_exec_t:lnk_file { read_lnk_file_perms };
 allow gravity_service_t gravity_container_init_t:unix_stream_socket ioctl;
 allow gravity_service_t gravity_container_init_t:unix_stream_socket { read write };
 
@@ -884,6 +899,9 @@ allow gravity_kubernetes_t gravity_container_init_t:dbus send_msg;
 allow gravity_kubernetes_t gravity_container_home_t:dir { getattr search open read remove_name write };
 # kubectl
 corecmd_exec_shell(gravity_kubernetes_t)
+modutils_read_module_deps_files(gravity_kubernetes_t)
+# node problem detector
+auth_read_passwd(gravity_kubernetes_t)
 
 # kubelet
 #==================================

@@ -414,6 +414,48 @@ interface(`gravity_container_manage_files',`
 
 ########################################
 ## <summary>
+## Allow process to mmap files in container home
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_home_mmap_files',`
+  gen_require(`
+    type gravity_container_home_t;
+  ')
+
+  allow $1 gravity_container_home_t:file map;
+  allow $1 gravity_container_home_t:chr_file map;
+  allow $1 gravity_container_home_t:blk_file map;
+  allow $1 gravity_container_home_t:lnk_file map;
+')
+
+########################################
+## <summary>
+## Allow process to mmap files in gravity home
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_home_mmap_files',`
+  gen_require(`
+    type gravity_home_t;
+  ')
+
+  allow $1 gravity_home_t:file map;
+  allow $1 gravity_home_t:chr_file map;
+  allow $1 gravity_home_t:blk_file map;
+  allow $1 gravity_home_t:lnk_file map;
+')
+
+########################################
+## <summary>
 ##	All of the rules required to administrate
 ##	a gravity environment
 ## </summary>
@@ -614,6 +656,7 @@ template(`gravity_system_container_domain_template',`
   can_exec($1_t, $1_exec_t)
   can_exec(gravity_domain, $1_exec_t)
   domtrans_pattern(gravity_domain, $1_exec_t, $1_t)
+  allow gravity_container_domain gravity_executable_domain:file getattr;
 
   typeattribute $1_t gravity_container_domain;
 
@@ -649,4 +692,5 @@ template(`gravity_container_domain_template',`
   mls_rangetrans_target($1_t)
   role system_r types $1_t;
   kernel_read_all_proc($1_t)
+  gravity_container_home_mmap_files(gravity_container_domain)
 ')
