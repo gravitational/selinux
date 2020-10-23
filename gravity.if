@@ -414,6 +414,69 @@ interface(`gravity_container_manage_files',`
 
 ########################################
 ## <summary>
+## Allow process to mmap files in container home
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_home_mmap_files',`
+  gen_require(`
+    type gravity_container_home_t;
+  ')
+
+  allow $1 gravity_container_home_t:file map;
+  allow $1 gravity_container_home_t:chr_file map;
+  allow $1 gravity_container_home_t:blk_file map;
+  allow $1 gravity_container_home_t:lnk_file map;
+')
+
+########################################
+## <summary>
+## Allow process to mmap files in gravity home
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_home_mmap_files',`
+  gen_require(`
+    type gravity_home_t;
+  ')
+
+  allow $1 gravity_home_t:file map;
+  allow $1 gravity_home_t:chr_file map;
+  allow $1 gravity_home_t:blk_file map;
+  allow $1 gravity_home_t:lnk_file map;
+')
+
+########################################
+## <summary>
+## Allow process to mmap files in logger container's home
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gravity_container_logger_home_mmap_files',`
+  gen_require(`
+    type gravity_container_logger_home_t;
+  ')
+
+  allow $1 gravity_container_logger_home_t:file map;
+  allow $1 gravity_container_logger_home_t:chr_file map;
+  allow $1 gravity_container_logger_home_t:blk_file map;
+  allow $1 gravity_container_logger_home_t:lnk_file map;
+')
+
+########################################
+## <summary>
 ##	All of the rules required to administrate
 ##	a gravity environment
 ## </summary>
@@ -579,6 +642,7 @@ template(`gravity_container_runtime_domain_template',`
   init_daemon_domain($1_t, $1_exec_t)
   can_exec($1_t, gravity_executable_domain)
   role gravity_container_roles types $1_t;
+  allow $1_t gravity_container_domain:process setsched;
 ')
 
 ########################################
@@ -614,6 +678,8 @@ template(`gravity_system_container_domain_template',`
   can_exec($1_t, $1_exec_t)
   can_exec(gravity_domain, $1_exec_t)
   domtrans_pattern(gravity_domain, $1_exec_t, $1_t)
+  allow gravity_container_domain gravity_executable_domain:file read_file_perms;
+  allow gravity_container_domain gravity_executable_domain:lnk_file read_lnk_file_perms;
 
   typeattribute $1_t gravity_container_domain;
 
@@ -649,4 +715,28 @@ template(`gravity_container_domain_template',`
   mls_rangetrans_target($1_t)
   role system_r types $1_t;
   kernel_read_all_proc($1_t)
+  gravity_container_home_mmap_files(gravity_container_domain)
+')
+
+########################################
+## <summary>
+##  Domain allowed access
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix for the domain.
+##	</summary>
+## </param>
+## <param name="role">
+## <summary>
+## 	Type resource to allow access to
+## </summary>
+## </param>
+#
+template(`gravity_admin_pattern',`
+  admin_pattern($1,$2,$2)
+  allow $1 $2:file map;
+  allow $1 $2:chr_file map;
+  allow $1 $2:blk_file map;
+  allow $1 $2:lnk_file map;
 ')
