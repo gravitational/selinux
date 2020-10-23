@@ -40,7 +40,6 @@ attribute gravity_executable_domain;
 
 # gravity domains
 gravity_domain_template(gravity)
-gravity_domain_template(gravity_installer)
 
 # state directory
 type gravity_home_t;
@@ -131,7 +130,7 @@ role gravity_roles types { gravity_container_domain gravity_domain };
 
 userdom_use_user_terminals(gravity_domain)
 can_exec(gravity_domain, gravity_exec_t)
-can_exec(gravity_domain, gravity_installer_exec_t)
+#can_exec(gravity_domain, gravity_installer_exec_t)
 can_exec(gravity_domain, gravity_container_file_t)
 
 gravity_admin_pattern(gravity_domain, gravity_home_t)
@@ -320,7 +319,8 @@ allow gravity_domain gravity_port_t:tcp_socket { listen name_bind };
 sysnet_domtrans_ifconfig(gravity_domain)
 iptables_domtrans(gravity_domain)
 optional_policy(`
-  modutils_domtrans_kmod(gravity_domain)
+  #modutils_domtrans_kmod(gravity_domain) in CentOS8
+  modutils_domtrans_insmod(gravity_domain)
 ')
 usermanage_domtrans_groupadd(gravity_domain)
 usermanage_domtrans_useradd(gravity_domain)
@@ -425,10 +425,11 @@ init_stop_transient_unit(gravity_domain)
 init_reload_services(gravity_domain)
 init_reload_services(gravity_domain)
 init_status(gravity_domain)
-optional_policy(`
-  init_start(gravity_domain)
-  init_stop(gravity_domain)
-')
+# CentOS8
+#optional_policy(`
+#  init_start(gravity_domain)
+#  init_stop(gravity_domain)
+#')
 
 # start/stop planet scope unit
 systemd_start_systemd_services(gravity_domain)
@@ -709,10 +710,11 @@ dbus_system_bus_client(gravity_container_runtime_t)
 filetrans_pattern(gravity_container_runtime_t, gravity_container_file_t, gravity_service_exec_t, lnk_file, "etcdctl-cmd")
 files_pid_filetrans(gravity_container_runtime_t, container_var_run_t, dir, "planet")
 files_pid_filetrans(gravity_container_runtime_t, container_var_run_t, sock_file, "planet.socket")
-optional_policy(`
-  init_start(gravity_container_runtime_t)
-  init_stop(gravity_container_runtime_t)
-')
+# CentOS 8
+#optional_policy(`
+#  init_start(gravity_container_runtime_t)
+#  init_stop(gravity_container_runtime_t)
+#')
 # planet scope units under /run/systemd/transient
 init_pid_filetrans(gravity_domain, gravity_container_var_run_t, file)
 allow gravity_domain gravity_container_var_run_t:service { manage_service_perms };
@@ -759,7 +761,8 @@ allow gravity_container_runtime_t self:tcp_socket { connect create setopt getopt
 # init_t -> /lib/systemd/system/kube-controller-manager.service
 allow gravity_container_runtime_t gravity_container_file_t:service { manage_service_perms };
 allow gravity_container_runtime_t gravity_container_init_t:dbus send_msg;
-allow gravity_container_runtime_t gravity_container_init_t:system { start stop status };
+# CentOS8: start stop
+allow gravity_container_runtime_t gravity_container_init_t:system { status };
 dontaudit gravity_container_runtime_t gravity_container_init_t:process setsched;
 
 ##################

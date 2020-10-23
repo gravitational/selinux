@@ -4,7 +4,7 @@ RUN set -x && \
 	go get -u github.com/gravitational/tpl && \
 	go install github.com/gravitational/tpl
 
-FROM registry.centos.org/centos/centos:8
+FROM registry.centos.org/centos/centos:7
 
 RUN set -x && yum -y install \
 	selinux-policy-targeted \
