@@ -72,6 +72,18 @@ build: buildbox
 		--rm ${BUILDBOX} \
 		make ${TARGETS:=.pp.bz2} $(OUTPUT)/gravity.statedir.fc.template
 
+.PHONY: shell
+shell: buildbox
+	${CONTAINER_RUNTIME} run \
+		-ti \
+		--name=${BUILDBOX_INSTANCE} \
+		--privileged \
+		-v ${PWD}:/src \
+		--env "OUTPUT_GROUP=${OUTPUT_GROUP}" \
+		--env "OUTPUT_OWNER=${OUTPUT_OWNER}" \
+		--rm ${BUILDBOX} \
+		bash
+
 .PHONY: buildbox
 buildbox:
 	${CONTAINER_RUNTIME} build -t ${BUILDBOX} ${CONTAINER_BUILD_ARGS} -f $(DOCKERFILE) .
