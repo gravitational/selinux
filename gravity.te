@@ -130,7 +130,6 @@ role gravity_roles types { gravity_container_domain gravity_domain };
 
 userdom_use_user_terminals(gravity_domain)
 can_exec(gravity_domain, gravity_exec_t)
-#can_exec(gravity_domain, gravity_installer_exec_t)
 can_exec(gravity_domain, gravity_container_file_t)
 
 gravity_admin_pattern(gravity_domain, gravity_home_t)
@@ -417,11 +416,6 @@ init_dbus_chat(gravity_domain)
 init_start_transient_unit(gravity_domain)
 init_stop_transient_unit(gravity_domain)
 
-# TODO(dmitri): unit file is absent
-#init_reload_transient_unit(gravity_domain)
-#init_enable_transient_unit(gravity_domain)
-#init_disable_transient_unit(gravity_domain)
-
 init_reload_services(gravity_domain)
 init_reload_services(gravity_domain)
 init_status(gravity_domain)
@@ -454,7 +448,6 @@ selinux_compute_create_context(gravity_domain)
 allow gravity_domain bin_t:lnk_file unlink;
 allow gravity_domain gravity_exec_t:lnk_file { create rename unlink };
 
-#dontaudit gravity_installer_t self:capability net_admin;
 dontaudit gravity_domain self:capability net_admin;
 dontaudit gravity_domain gravity_container_runtime_t:process { noatsecure rlimitinh siginh };
 allow gravity_domain self:netlink_kobject_uevent_socket { create bind setopt getattr };
@@ -1026,6 +1019,9 @@ auth_read_login_records(gravity_domain)
 term_dontaudit_getattr_unallocated_ttys(gravity_domain)
 # 'kubectl logs' executes readlink
 # TODO(dmitri): maybe do not transition to other domains when collecting report?
+# transitioning into other domains instead of executing the sub-processes in the gravity domain
+# would allow to extend the policy with required rules - otherwise we are at the mercy of the
+# corresponding domain and its permissions (or lack thereof)
 corecmd_exec_bin(gravity_kubernetes_t)
 # df -i
 allow gravity_domain configfs_t:dir list_dir_perms;
