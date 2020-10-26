@@ -10,7 +10,7 @@ OUTPUT_OWNER?=$(shell id -u)
 CONTAINER_SOURCES=$(addprefix, container-selinux/, container.te container.if container.fc)
 BUILDBOX?=selinux-dev:centos7
 BUILDBOX_INSTANCE?=selinux-dev
-VERSION?=6.0.0
+VERSION?=6.0.2
 DOCKERFILE:=Dockerfile
 CONTAINER_RUNTIME?=$(shell command -v podman 2> /dev/null || echo docker)
 COPY:=cp
@@ -71,6 +71,18 @@ build: buildbox
 		--env "OUTPUT_OWNER=${OUTPUT_OWNER}" \
 		--rm ${BUILDBOX} \
 		make ${TARGETS:=.pp.bz2} $(OUTPUT)/gravity.statedir.fc.template
+
+.PHONY: shell
+shell: buildbox
+	${CONTAINER_RUNTIME} run \
+		-ti \
+		--name=${BUILDBOX_INSTANCE} \
+		--privileged \
+		-v ${PWD}:/src \
+		--env "OUTPUT_GROUP=${OUTPUT_GROUP}" \
+		--env "OUTPUT_OWNER=${OUTPUT_OWNER}" \
+		--rm ${BUILDBOX} \
+		bash
 
 .PHONY: buildbox
 buildbox:
